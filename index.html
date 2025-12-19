@@ -93,11 +93,13 @@
         const scoreEl = document.getElementById(`${classKey}-score`);
         const reasonsDiv = document.getElementById(`${classKey}-reasons`);
 
+        // Listener for score updates
         db.ref(`classes/${classKey}/points`).on("value", snap => {
           scoreEl.textContent = `총점: ${snap.val() ?? 0}`;
         });
 
-        db.ref(`classes/${classKey}/log`).orderByChild("ts").limitToLast(3).on("value", snap => {
+        // ✅ Fixed listener for reasons
+        db.ref(`classes/${classKey}/log`).orderByChild("ts").on("value", snap => {
           reasonsDiv.innerHTML = "";
           if (!snap.exists()) {
             reasonsDiv.innerHTML = `<div class="empty">최근 이유가 없습니다.</div>`;
@@ -105,7 +107,8 @@
             const entries = [];
             snap.forEach(child => entries.push(child.val()));
             entries.sort((a,b) => a.ts - b.ts);
-            entries.forEach(e => {
+            const last3 = entries.slice(-3);
+            last3.forEach(e => {
               const div = document.createElement("div");
               div.className = `reason ${e.type}`;
               div.textContent = (e.type==="add"?"+":"−")+e.amount+"점: "+e.reason;
