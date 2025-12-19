@@ -36,14 +36,13 @@
     <li><a href="#" onclick="renderGrade(3)">3학년</a></li>
     <li><a href="#" onclick="renderGrade(4)">4학년</a></li>
     <li><a href="#" onclick="renderGrade(5)">5학년</a></li>
-    <li><a href="#" onclick="renderGrade(6)">6학년</a></li>
+    <li>
+      <a href="#" onclick="renderGrade(6)">6학년</a>
+      <ul>
+        <li><a href="#" onclick="renderAdmin()">Admin</a></li>
+      </ul>
+    </li>
   </ul>
-
-  <!-- Master reset double link -->
-  <a href="#" class="reset" onclick="showResetConfirm()">🔄 전체 초기화</a>
-  <span id="resetConfirm" style="display:none; margin-left:12px;">
-    <a href="#" class="reset" onclick="masterReset()">⚠️ 정말 초기화하시겠습니까?</a>
-  </span>
 
   <div id="view"></div>
 
@@ -72,7 +71,7 @@
 
     function renderGrade(grade) {
       view.innerHTML = `<a href="#" class="back" onclick="goHome()">← 학년으로 돌아가기</a>
-                        <h2>${grade}학년 학급 점수판</h2>
+                        <h2><strong>${grade}학년 학급 점수판</strong></h2>
                         <div id="classesGrid" class="grid"></div>`;
       const grid = document.getElementById("classesGrid");
 
@@ -82,7 +81,7 @@
         card.className = "card";
         card.innerHTML = `
           <div class="row">
-            <div>${classKey}</div>
+            <div><strong>${classKey}</strong></div>
             <div id="${classKey}-score"><strong>총점: 0</strong></div>
           </div>
           <div class="controls">
@@ -114,11 +113,11 @@
             const entries = [];
             snap.forEach(child => entries.push({ ...child.val(), key: child.key }));
             entries.sort((a,b) => b.ts - a.ts);   // newest first
-            const last3 = entries.slice(0,3);     // ✅ latest 3
+            const last3 = entries.slice(0,3);     // latest 3
             last3.forEach(e => {
               const div = document.createElement("div");
               div.className = `reason ${e.type}`; // "add" or "remove"
-              div.textContent = (e.type === "add" ? "+" : "−") + e.amount + "점: " + e.reason;
+              div.innerHTML = `<strong>${(e.type === "add" ? "+" : "−")}${e.amount}점</strong>: ${e.reason}`;
               reasonsDiv.appendChild(div);
             });
           }
@@ -151,14 +150,10 @@
         ts: Date.now()
       };
 
-      const newLog = logRef.push();
-      newLog.set(entry).then(() => {
-        const undoBtn = document.createElement("button");
-        undoBtn.textContent = "↩️ 되돌리기";
-        undoBtn.style = "margin-top:8px; padding:6px; background:#facc15; border:none; border-radius:6px; font-weight:bold;";
-        undoBtn.onclick = () => {
-          newLog.remove();
-          ref.child("points").transaction(p => (p || 0) - delta);
-          undoBtn.remove();
-        };
-        const reasonsDiv = document.getElement
+      logRef.push(entry);
+    }
+
+    function renderAdmin() {
+      view.innerHTML = `<a href="#" class="back" onclick="goHome()">← 학년으로 돌아가기</a>
+                        <h2><strong>관리자 메뉴</strong></h2>
+                        <button class="reset" onclick="masterReset()">🔄 전체 초기
