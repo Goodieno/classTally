@@ -1,175 +1,134 @@
-<!-- Paste this into your GitHub repo as index.html -->
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-  <meta charset="UTF-8">
-  <title>학급 점수판 (디버그 버전)</title>
-  <style>
-    body { font-family: Arial, sans-serif; background:#f9fafb; margin:0; padding:20px; }
-    h1 { margin-bottom:20px; }
-    ul { list-style:none; padding:0; }
-    li { margin:8px 0; }
-    a { text-decoration:none; color:#2563eb; font-size:18px; }
-    a:hover { text-decoration:underline; }
-    .grid { display:grid; gap:12px; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); }
-    .card { background:#fff; border:1px solid #ddd; border-radius:8px; padding:12px; }
-    .row { display:flex; justify-content:space-between; margin-bottom:10px; align-items:center; }
-    .controls { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
-    .controls input { grid-column:span 2; padding:8px; border:1px solid #ccc; border-radius:6px; }
-    .controls button { padding:8px; cursor:pointer; border:none; color:#fff; font-weight:bold; border-radius:6px; }
-    .btn-add { background:#16a34a; }
-    .btn-take { background:#dc2626; }
-    .reasons { margin-top:10px; display:grid; gap:6px; }
-    .reason { background:#fff; padding:6px 8px; border-radius:6px; font-size:14px; }
-    .reason.add { color:#16a34a; font-weight:bold; }
-    .reason.remove { color:#dc2626; font-weight:bold; } /* ✅ fixed to match JS */
-    .score { font-weight:bold; }
-    .back { display:inline-block; margin-bottom:16px; color:#2563eb; text-decoration:none; }
-    .empty { color:#6b7280; font-size:13px; background:#fff; padding:6px 8px; border-radius:6px; }
-  </style>
-</head>
-<body>
-  <h1>학년 선택</h1>
-  <ul>
-    <li><a href="#" onclick="renderGrade(1)">1학년</a></li>
-    <li><a href="#" onclick="renderGrade(2)">2학년</a></li>
-    <li><a href="#" onclick="renderGrade(3)">3학년</a></li>
-    <li><a href="#" onclick="renderGrade(4)">4학년</a></li>
-    <li><a href="#" onclick="renderGrade(5)">5학년</a></li>
-    <li><a href="#" onclick="renderGrade(6)">6학년</a></li>
-  </ul>
+<!-- Firebase SDKs (CDN compat version) -->
+<script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-auth-compat.js"></script>
 
-  <div id="view"></div>
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyDWrEqadNQ0ktZ9rIBG7yRequX_rstFFsE",
+    authDomain: "online-tally-system.firebaseapp.com",
+    databaseURL: "https://online-tally-system-default-rtdb.firebaseio.com",
+    projectId: "online-tally-system",
+    storageBucket: "online-tally-system.appspot.com",
+    messagingSenderId: "89585597340",
+    appId: "1:89585597340:web:989e55802c4ebf68f6e659",
+    measurementId: "G-ZWWG5EH8C8"
+  };
 
-  <!-- Firebase SDKs (CDN compat version) -->
-  <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-database-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-auth-compat.js"></script>
+  try {
+    firebase.initializeApp(firebaseConfig);
+    console.log("[Firebase] Initialized");
+  } catch (e) {
+    console.error("[Firebase Init Error]", e);
+  }
 
-  <script>
-    const firebaseConfig = {
-      apiKey: "AIzaSyDWrEqadNQ0ktZ9rIBG7yRequX_rstFFsE",
-      authDomain: "online-tally-system.firebaseapp.com",
-      databaseURL: "https://online-tally-system-default-rtdb.firebaseio.com",
-      projectId: "online-tally-system",
-      storageBucket: "online-tally-system.appspot.com",
-      messagingSenderId: "89585597340",
-      appId: "1:89585597340:web:989e55802c4ebf68f6e659",
-      measurementId: "G-ZWWG5EH8C8"
-    };
+  firebase.auth().signInAnonymously()
+    .then(() => console.log("[Auth] Signed in anonymously"))
+    .catch(err => console.error("[Auth Error]", err));
 
-    try {
-      firebase.initializeApp(firebaseConfig);
-      console.log("[Firebase] Initialized");
-    } catch (e) {
-      console.error("[Firebase Init Error]", e);
-    }
+  const db = firebase.database();
+  const view = document.getElementById("view");
 
-    firebase.auth().signInAnonymously()
-      .then(() => console.log("[Auth] Signed in anonymously"))
-      .catch(err => console.error("[Auth Error]", err));
+  function renderGrade(grade) {
+    view.innerHTML = `<a href="#" class="back" onclick="goHome()">← 학년으로 돌아가기</a>
+                      <h2>${grade}학년 학급 점수판</h2>
+                      <div id="classesGrid" class="grid"></div>`;
+    const grid = document.getElementById("classesGrid");
 
-    const db = firebase.database();
-    const view = document.getElementById("view");
+    for (let c = 1; c <= 8; c++) {
+      const classKey = `${grade}학년-${c}반`;
+      const card = document.createElement("div");
+      card.className = "card";
+      card.innerHTML = `
+        <div class="row">
+          <div>${classKey}</div>
+          <div id="${classKey}-score">총점: 0</div>
+        </div>
+        <div class="controls">
+          <input type="text" placeholder="이유 입력" id="${classKey}-reason"/>
+          <button class="btn-add" id="${classKey}-add">+ 점수 추가</button>
+          <button class="btn-take" id="${classKey}-take">− 점수 차감</button>
+        </div>
+        <div class="reasons" id="${classKey}-reasons">
+          <div class="empty">최근 이유가 없습니다.</div>
+        </div>
+      `;
+      grid.appendChild(card);
 
-    function renderGrade(grade) {
-      view.innerHTML = `<a href="#" class="back" onclick="goHome()">← 학년으로 돌아가기</a>
-                        <h2>${grade}학년 학급 점수판</h2>
-                        <div id="classesGrid" class="grid"></div>`;
-      const grid = document.getElementById("classesGrid");
+      const reasonInput = document.getElementById(`${classKey}-reason`);
+      const addBtn = document.getElementById(`${classKey}-add`);
+      const takeBtn = document.getElementById(`${classKey}-take`);
+      const scoreEl = document.getElementById(`${classKey}-score`);
+      const reasonsDiv = document.getElementById(`${classKey}-reasons`);
 
-      for (let c = 1; c <= 8; c++) {
-        const classKey = `${grade}학년-${c}반`;
-        const card = document.createElement("div");
-        card.className = "card";
-        card.innerHTML = `
-          <div class="row">
-            <div>${classKey}</div>
-            <div id="${classKey}-score">총점: 0</div>
-          </div>
-          <div class="controls">
-            <input type="text" placeholder="이유 입력" id="${classKey}-reason"/>
-            <button class="btn-add" id="${classKey}-add">+ 점수 추가</button>
-            <button class="btn-take" id="${classKey}-take">− 점수 차감</button>
-          </div>
-          <div class="reasons" id="${classKey}-reasons">
-            <div class="empty">최근 이유가 없습니다.</div>
-          </div>
-        `;
-        grid.appendChild(card);
-
-        const reasonInput = document.getElementById(`${classKey}-reason`);
-        const addBtn = document.getElementById(`${classKey}-add`);
-        const takeBtn = document.getElementById(`${classKey}-take`);
-        const scoreEl = document.getElementById(`${classKey}-score`);
-        const reasonsDiv = document.getElementById(`${classKey}-reasons`);
-
-        // ✅ Score listener
-        db.ref(`classes/${classKey}/points`).on("value", snap => {
-          const val = snap.val();
-          console.log(`[Score Listener] ${classKey}:`, val);
-          scoreEl.textContent = `총점: ${val ?? 0}`;
-        }, err => console.error(`[Score Listener Error] ${classKey}`, err));
-
-        // ✅ Reason listener
-        db.ref(`classes/${classKey}/log`).on("value", snap => {
-          console.log(`[Log Listener] ${classKey}:`, snap.exists() ? "has data" : "no data");
-          reasonsDiv.innerHTML = "";
-          if (!snap.exists()) {
-            reasonsDiv.innerHTML = `<div class="empty">최근 이유가 없습니다.</div>`;
-          } else {
-            const entries = [];
-            snap.forEach(child => entries.push(child.val()));
-            entries.sort((a,b) => b.ts - a.ts);   // ✅ newest first
-            const last3 = entries.slice(0,3);     // ✅ latest 3
-            last3.forEach(e => {
-              const div = document.createElement("div");
-              div.className = `reason ${e.type}`;
-              div.textContent = (e.type==="add"?"+":"−")+e.amount+"점: "+e.reason;
-              reasonsDiv.appendChild(div);
-            });
-          }
-        }, err => console.error(`[Log Listener Error] ${classKey}`, err));
-
-        addBtn.onclick = () => {
-          const reason = reasonInput.value.trim() || "이유 없음";
-          console.log(`[Add] ${classKey}:`, reason);
-          saveChange(classKey, +2, reason);
-          reasonInput.value = "";
-        };
-
-        takeBtn.onclick = () => {
-          const reason = reasonInput.value.trim() || "이유 없음";
-          console.log(`[Remove] ${classKey}:`, reason);
-          saveChange(classKey, -1, reason);
-          reasonInput.value = "";
-        };
-      }
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    }
-
-    function saveChange(classKey, delta, reason) {
-      const ref = db.ref(`classes/${classKey}`);
-      ref.child("points").transaction(p => (p || 0) + delta, (err, committed, snap) => {
-        if (err) console.error(`[Transaction Error] ${classKey}`, err);
-        else console.log(`[Transaction OK] ${classKey}:`, snap?.val());
+      db.ref(`classes/${classKey}/points`).on("value", snap => {
+        const val = snap.val();
+        scoreEl.textContent = `총점: ${val ?? 0}`;
       });
 
-      const entry = {
-        type: delta > 0 ? "add" : "remove",   // ✅ fixed
-        amount: Math.abs(delta),
-        reason,
-        ts: Date.now()
+      db.ref(`classes/${classKey}/log`).on("value", snap => {
+        reasonsDiv.innerHTML = "";
+        if (!snap.exists()) {
+          reasonsDiv.innerHTML = `<div class="empty">최근 이유가 없습니다.</div>`;
+        } else {
+          const entries = [];
+          snap.forEach(child => entries.push({ ...child.val(), key: child.key }));
+          entries.sort((a,b) => b.ts - a.ts);
+          const last3 = entries.slice(0,3);
+          last3.forEach(e => {
+            const div = document.createElement("div");
+            div.className = `reason ${e.type}`;
+            div.textContent = (e.type==="add" ? "+" : "−") + e.amount + "점: " + e.reason;
+            reasonsDiv.appendChild(div);
+          });
+        }
+      });
+
+      addBtn.onclick = () => {
+        const reason = reasonInput.value.trim() || "이유 없음";
+        saveChange(classKey, +2, reason);
+        reasonInput.value = "";
       };
 
-      ref.child("log").push(entry)
-        .then(() => console.log(`[Log Push OK] ${classKey}:`, entry))
-        .catch(err => console.error(`[Log Push Error] ${classKey}`, err));
+      takeBtn.onclick = () => {
+        const reason = reasonInput.value.trim() || "이유 없음";
+        saveChange(classKey, -1, reason);
+        reasonInput.value = "";
+      };
     }
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
 
-    function goHome() {
-      view.innerHTML = "";
-    }
-  </script>
-</body>
-</html>
+  function saveChange(classKey, delta, reason) {
+    const ref = db.ref(`classes/${classKey}`);
+    const logRef = ref.child("log");
+
+    ref.child("points").transaction(p => (p || 0) + delta);
+
+    const entry = {
+      type: delta > 0 ? "add" : "remove",
+      amount: Math.abs(delta),
+      reason,
+      ts: Date.now()
+    };
+
+    const newLog = logRef.push();
+    newLog.set(entry)
+      .then(() => {
+        const undoBtn = document.createElement("button");
+        undoBtn.textContent = "↩️ 되돌리기";
+        undoBtn.style = "margin-top:8px; padding:6px; background:#facc15; border:none; border-radius:6px; font-weight:bold;";
+        undoBtn.onclick = () => {
+          newLog.remove();
+          ref.child("points").transaction(p => (p || 0) - delta);
+          undoBtn.remove();
+        };
+        const reasonsDiv = document.getElementById(`${classKey}-reasons`);
+        reasonsDiv.appendChild(undoBtn);
+      });
+  }
+
+  function goHome() {
+    view.innerHTML = "";
+  }
+</script>
