@@ -7,8 +7,8 @@
 <body>
   <h1>Menu</h1>
   <ul>
-    <li><a href="#" onclick="renderGrade(1)">1학년</a></li>
-    <li><a href="#" onclick="renderAdmin()">Admin</a></li>
+    <li><a href="#" onclick="renderGrade(1); return false;">1학년</a></li>
+    <li><a href="#" onclick="renderAdmin(); return false;">Admin</a></li>
   </ul>
 
   <div id="view"></div>
@@ -25,13 +25,9 @@
         "<button onclick='masterReset()'>🔄 전체 초기화</button>";
     };
 
-    function masterReset() {
+    window.masterReset = function() {
       alert("Reset clicked!");
-    }
-
-    function goHome() {
-      document.getElementById("view").innerHTML = "";
-    }
+    };
   </script>
 </body>
 </html>
