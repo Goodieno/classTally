@@ -52,9 +52,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-database-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-auth-compat.js"></script>
 
-  <!-- App script at the very bottom -->
   <script>
-    // Replace with your Firebase config if different
     const firebaseConfig = {
       apiKey: "AIzaSyDWrEqadNQ0ktZ9rIBG7yRequX_rstFFsE",
       authDomain: "online-tally-system.firebaseapp.com",
@@ -67,18 +65,16 @@
     };
 
     firebase.initializeApp(firebaseConfig);
-    firebase.auth().signInAnonymously().catch(() => { /* ignore for anon */ });
+    firebase.auth().signInAnonymously();
 
     const db = firebase.database();
     const view = document.getElementById("view");
 
-    // Home
     window.goHome = function() {
       view.innerHTML = "";
       window.scrollTo(0, 0);
     };
 
-    // Render a grade with 8 classes
     window.renderGrade = function(grade) {
       view.innerHTML = `
         <a href="#" class="back" onclick="goHome(); return false;">← 학년으로 돌아가기</a>
@@ -113,31 +109,30 @@
         const scoreEl = document.getElementById(`${cssId(classKey)}-score`);
         const reasonsDiv = document.getElementById(`${cssId(classKey)}-reasons`);
 
-        // Live score
         db.ref(`classes/${classKey}/points`).on("value", snap => {
           scoreEl.innerHTML = `<strong>총점: ${snap.val() ?? 0}</strong>`;
         });
 
-        // Live reasons (latest 3)
-        db.ref(`classes/${classKey}/log`).on("value", snap => {
-          reasonsDiv.innerHTML = "";
-          if (!snap.exists()) {
-            reasonsDiv.innerHTML = `<div class="empty">최근 이유가 없습니다.</div>`;
-            return;
-          }
-          const entries = [];
-          snap.forEach(child => entries.push({ ...child.val(), key: child.key }));
-          entries.sort((a, b) => b.ts - a.ts);
-          const last3 = entries.slice(0, 3);
-          last3.forEach(e => {
+        // FIXED: show every new reason, keep latest 3
+        db.ref(`classes/${classKey}/log`)
+          .orderByChild("ts")
+          .limitToLast(3)
+          .on("child_added", snap => {
+            const e = snap.val();
             const div = document.createElement("div");
             div.className = `reason ${e.type}`;
             div.innerHTML = `<strong>${e.type === "add" ? "+" : "−"}${e.amount}점</strong>: ${escapeHtml(e.reason || "이유 없음")}`;
-            reasonsDiv.appendChild(div);
-          });
-        });
 
-        // Add / take actions
+            const empty = reasonsDiv.querySelector(".empty");
+            if (empty) empty.remove();
+
+            reasonsDiv.insertBefore(div, reasonsDiv.firstChild);
+
+            while (reasonsDiv.children.length > 3) {
+              reasonsDiv.removeChild(reasonsDiv.lastChild);
+            }
+          });
+
         addBtn.onclick = () => {
           const reason = (reasonInput.value || "").trim() || "이유 없음";
           saveChange(classKey, +2, reason);
@@ -152,7 +147,6 @@
       }
     };
 
-    // Save a change to Firebase
     function saveChange(classKey, delta, reason) {
       const ref = db.ref(`classes/${classKey}`);
       const logRef = ref.child("log");
@@ -168,7 +162,6 @@
       logRef.push(entry);
     }
 
-    // Admin
     window.renderAdmin = function() {
       view.innerHTML = `
         <a href="#" class="back" onclick="goHome(); return false;">← 학년으로 돌아가기</a>
@@ -177,33 +170,5 @@
       `;
     };
 
-    // Master reset: clears points and logs for all grades/classes
     window.masterReset = function() {
-      if (!confirm("정말 모든 학급 데이터를 초기화하시겠습니까?")) return;
-      for (let g = 1; g <= 6; g++) {
-        for (let c = 1; c <= 8; c++) {
-          const classKey = `${g}학년-${c}반`;
-          const ref = db.ref(`classes/${classKey}`);
-          ref.child("points").set(0);
-          ref.child("log").set(null);
-        }
-      }
-      alert("전체 초기화 완료!");
-    };
-
-    // Helpers
-    function cssId(s) {
-      // Safe ID for elements
-      return s.replace(/\s+/g, "_");
-    }
-    function escapeHtml(str) {
-      return String(str)
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
-    }
-  </script>
-</body>
-</html>
+      if (!confirm
