@@ -70,12 +70,12 @@
     const db = firebase.database();
     const view = document.getElementById("view");
 
-    window.goHome = function() {
+    function goHome() {
       view.innerHTML = "";
       window.scrollTo(0, 0);
-    };
+    }
 
-    window.renderGrade = function(grade) {
+    function renderGrade(grade) {
       view.innerHTML = `
         <a href="#" class="back" onclick="goHome(); return false;">← 학년으로 돌아가기</a>
         <h2><strong>${grade}학년 학급 점수판</strong></h2>
@@ -113,7 +113,6 @@
           scoreEl.innerHTML = `<strong>총점: ${snap.val() ?? 0}</strong>`;
         });
 
-        // Show latest 3 reasons with month/day and time
         db.ref(`classes/${classKey}/log`).limitToLast(3).on("value", snap => {
           reasonsDiv.innerHTML = "";
           if (!snap.exists()) {
@@ -150,7 +149,7 @@
           reasonInput.value = "";
         };
       }
-    };
+    }
 
     function saveChange(classKey, delta, reason) {
       const ref = db.ref(`classes/${classKey}`);
@@ -163,3 +162,9 @@
         ts: firebase.database.ServerValue.TIMESTAMP
       };
       logRef.push(entry);
+    }
+
+    function renderAdmin() {
+      view.innerHTML = `
+        <a href="#" class="back" onclick="goHome(); return false;">← 학년으로 돌아가기</a>
+        <h2><strong>관리자 메뉴
