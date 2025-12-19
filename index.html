@@ -113,25 +113,30 @@
           scoreEl.innerHTML = `<strong>총점: ${snap.val() ?? 0}</strong>`;
         });
 
-        // FIXED: show every new reason, keep latest 3
-        db.ref(`classes/${classKey}/log`)
-          .orderByChild("ts")
-          .limitToLast(3)
-          .on("child_added", snap => {
-            const e = snap.val();
+        // Show latest 3 reasons with month/day and time
+        db.ref(`classes/${classKey}/log`).limitToLast(3).on("value", snap => {
+          reasonsDiv.innerHTML = "";
+          if (!snap.exists()) {
+            reasonsDiv.innerHTML = `<div class="empty">최근 이유가 없습니다.</div>`;
+            return;
+          }
+          const items = [];
+          snap.forEach(child => items.push(child.val()));
+          items.reverse();
+          items.forEach(e => {
             const div = document.createElement("div");
             div.className = `reason ${e.type}`;
-            div.innerHTML = `<strong>${e.type === "add" ? "+" : "−"}${e.amount}점</strong>: ${escapeHtml(e.reason || "이유 없음")}`;
-
-            const empty = reasonsDiv.querySelector(".empty");
-            if (empty) empty.remove();
-
-            reasonsDiv.insertBefore(div, reasonsDiv.firstChild);
-
-            while (reasonsDiv.children.length > 3) {
-              reasonsDiv.removeChild(reasonsDiv.lastChild);
-            }
+            const date = new Date(e.ts);
+            const formatted = date.toLocaleString("ko-KR", {
+              month: "2-digit",
+              day: "2-digit",
+              hour: "2-digit",
+              minute: "2-digit"
+            });
+            div.innerHTML = `<strong>${e.type === "add" ? "+" : "−"}${e.amount}점</strong>: ${escapeHtml(e.reason || "이유 없음")} <span style="color:#6b7280; font-size:12px;">(${formatted})</span>`;
+            reasonsDiv.appendChild(div);
           });
+        });
 
         addBtn.onclick = () => {
           const reason = (reasonInput.value || "").trim() || "이유 없음";
@@ -150,25 +155,16 @@
     function saveChange(classKey, delta, reason) {
       const ref = db.ref(`classes/${classKey}`);
       const logRef = ref.child("log");
-
       ref.child("points").transaction(p => (p || 0) + delta);
-
       const entry = {
         type: delta > 0 ? "add" : "remove",
         amount: Math.abs(delta),
         reason,
-        ts: Date.now()
+        ts: firebase.database.ServerValue.TIMESTAMP
       };
       logRef.push(entry);
     }
 
     window.renderAdmin = function() {
       view.innerHTML = `
-        <a href="#" class="back" onclick="goHome(); return false;">← 학년으로 돌아가기</a>
-        <h2><strong>관리자 메뉴</strong></h2>
-        <button class="reset" onclick="masterReset(); return false;">🔄 전체 초기화</button>
-      `;
-    };
-
-    window.masterReset = function() {
-      if (!confirm
+        <a href="#" class="back" onclick="goHome(); return false;">← 학년으로 돌아
