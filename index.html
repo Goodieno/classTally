@@ -69,7 +69,8 @@
     const db = firebase.database();
     const view = document.getElementById("view");
 
-    function renderGrade(grade) {
+    // Render grade scoreboard
+    window.renderGrade = function(grade) {
       view.innerHTML = `<a href="#" class="back" onclick="goHome()">← 학년으로 돌아가기</a>
                         <h2><strong>${grade}학년 학급 점수판</strong></h2>
                         <div id="classesGrid" class="grid"></div>`;
@@ -135,8 +136,9 @@
           reasonInput.value = "";
         };
       }
-    }
+    };
 
+    // Save changes
     function saveChange(classKey, delta, reason) {
       const ref = db.ref(`classes/${classKey}`);
       const logRef = ref.child("log");
@@ -153,15 +155,15 @@
       logRef.push(entry);
     }
 
-    function renderAdmin() {
+    // Admin panel
+    window.renderAdmin = function() {
       view.innerHTML = `<a href="#" class="back" onclick="goHome()">← 학년으로 돌아가기</a>
                         <h2><strong>관리자 메뉴</strong></h2>
                         <button class="reset" onclick="masterReset()">🔄 전체 초기화</button>`;
-    }
+    };
 
+    // Master reset
     function masterReset() {
       if (!confirm("정말 모든 학급 데이터를 초기화하시겠습니까?")) return;
       for (let g = 1; g <= 6; g++) {
-        for (let c = 1; c <= 8; c++) {
-          const classKey = `${g}학년-${c}반`;
-          const ref =
+        for (let c = 1
