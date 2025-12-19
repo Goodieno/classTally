@@ -21,10 +21,11 @@
     .reasons { margin-top:10px; display:grid; gap:6px; }
     .reason { background:#fff; padding:6px 8px; border-radius:6px; font-size:14px; }
     .reason.add { color:#16a34a; font-weight:bold; }
-    .reason.remove { color:#dc2626; font-weight:bold; } /* ✅ red for negative */
+    .reason.remove { color:#dc2626; font-weight:bold; }
     .score { font-weight:bold; }
     .back { display:inline-block; margin-bottom:16px; color:#2563eb; text-decoration:none; }
     .empty { color:#6b7280; font-size:13px; background:#fff; padding:6px 8px; border-radius:6px; }
+    .reset { display:inline-block; margin-top:20px; color:#dc2626; font-weight:bold; cursor:pointer; }
   </style>
 </head>
 <body>
@@ -37,6 +38,12 @@
     <li><a href="#" onclick="renderGrade(5)">5학년</a></li>
     <li><a href="#" onclick="renderGrade(6)">6학년</a></li>
   </ul>
+
+  <!-- Master reset double link -->
+  <a href="#" class="reset" onclick="showResetConfirm()">🔄 전체 초기화</a>
+  <span id="resetConfirm" style="display:none; margin-left:12px;">
+    <a href="#" class="reset" onclick="masterReset()">⚠️ 정말 초기화하시겠습니까?</a>
+  </span>
 
   <div id="view"></div>
 
@@ -76,7 +83,7 @@
         card.innerHTML = `
           <div class="row">
             <div>${classKey}</div>
-            <div id="${classKey}-score">총점: 0</div>
+            <div id="${classKey}-score"><strong>총점: 0</strong></div>
           </div>
           <div class="controls">
             <input type="text" placeholder="이유 입력" id="${classKey}-reason"/>
@@ -96,7 +103,7 @@
         const reasonsDiv = document.getElementById(`${classKey}-reasons`);
 
         db.ref(`classes/${classKey}/points`).on("value", snap => {
-          scoreEl.textContent = `총점: ${snap.val() ?? 0}`;
+          scoreEl.innerHTML = `<strong>총점: ${snap.val() ?? 0}</strong>`;
         });
 
         db.ref(`classes/${classKey}/log`).on("value", snap => {
@@ -138,7 +145,7 @@
       ref.child("points").transaction(p => (p || 0) + delta);
 
       const entry = {
-        type: delta > 0 ? "add" : "remove",   // ✅ unified
+        type: delta > 0 ? "add" : "remove",
         amount: Math.abs(delta),
         reason,
         ts: Date.now()
@@ -146,7 +153,6 @@
 
       const newLog = logRef.push();
       newLog.set(entry).then(() => {
-        // Undo button only for this session
         const undoBtn = document.createElement("button");
         undoBtn.textContent = "↩️ 되돌리기";
         undoBtn.style = "margin-top:8px; padding:6px; background:#facc15; border:none; border-radius:6px; font-weight:bold;";
@@ -155,14 +161,4 @@
           ref.child("points").transaction(p => (p || 0) - delta);
           undoBtn.remove();
         };
-        const reasonsDiv = document.getElementById(`${classKey}-reasons`);
-        reasonsDiv.appendChild(undoBtn);
-      });
-    }
-
-    function goHome() {
-      view.innerHTML = "";
-    }
-  </script>
-</body>
-</html>
+        const reasonsDiv = document.getElement
