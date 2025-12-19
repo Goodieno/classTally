@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <title>학급 점수판</title>
+  <title>학급 점수판 (디버그 버전)</title>
   <style>
     body { font-family: Arial, sans-serif; background:#f9fafb; margin:0; padding:20px; }
     h1 { margin-bottom:20px; }
@@ -21,7 +21,7 @@
     .reasons { margin-top:10px; display:grid; gap:6px; }
     .reason { background:#fff; padding:6px 8px; border-radius:6px; font-size:14px; }
     .reason.add { color:#16a34a; font-weight:bold; }
-    .reason.take { color:#dc2626; font-weight:bold; }
+    .reason.remove { color:#dc2626; font-weight:bold; }
     .score { font-weight:bold; }
     .back { display:inline-block; margin-bottom:16px; color:#2563eb; text-decoration:none; }
     .empty { color:#6b7280; font-size:13px; background:#fff; padding:6px 8px; border-radius:6px; }
@@ -40,24 +40,26 @@
 
   <div id="view"></div>
 
-  <!-- Firebase SDK -->
+  <!-- Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-database-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-auth-compat.js"></script>
 
   <script>
     const firebaseConfig = {
-      apiKey: "AIzaSyDWrEaqdNQktZ9rIBG...",
+      apiKey: "AIzaSyDWrEqadNQ0ktZ9rIBG7yRequX_rstFFsE",
       authDomain: "online-tally-system.firebaseapp.com",
       databaseURL: "https://online-tally-system-default-rtdb.firebaseio.com",
       projectId: "online-tally-system",
       storageBucket: "online-tally-system.appspot.com",
       messagingSenderId: "89585597340",
-      appId: "1:89585597340:web:989e55802c4ebf68f6e659"
+      appId: "1:89585597340:web:989e55802c4ebf68f6e659",
+      measurementId: "G-ZWWG5EH8C8"
     };
 
     firebase.initializeApp(firebaseConfig);
-    firebase.auth().signInAnonymously().catch(console.error);
+    firebase.auth().signInAnonymously();
+
     const db = firebase.database();
     const view = document.getElementById("view");
 
@@ -93,25 +95,23 @@
         const scoreEl = document.getElementById(`${classKey}-score`);
         const reasonsDiv = document.getElementById(`${classKey}-reasons`);
 
-        // Listener for score updates
         db.ref(`classes/${classKey}/points`).on("value", snap => {
           scoreEl.textContent = `총점: ${snap.val() ?? 0}`;
         });
 
-        // ✅ Fixed listener for reasons
-        db.ref(`classes/${classKey}/log`).orderByChild("ts").on("value", snap => {
+        db.ref(`classes/${classKey}/log`).on("value", snap => {
           reasonsDiv.innerHTML = "";
           if (!snap.exists()) {
             reasonsDiv.innerHTML = `<div class="empty">최근 이유가 없습니다.</div>`;
           } else {
             const entries = [];
-            snap.forEach(child => entries.push(child.val()));
-            entries.sort((a,b) => a.ts - b.ts);
-            const last3 = entries.slice(-3);
+            snap.forEach(child => entries.push({ ...child.val(), key: child.key }));
+            entries.sort((a,b) => b.ts - a.ts);   // newest first
+            const last3 = entries.slice(0,3);     // latest 3
             last3.forEach(e => {
               const div = document.createElement("div");
               div.className = `reason ${e.type}`;
-              div.textContent = (e.type==="add"?"+":"−")+e.amount+"점: "+e.reason;
+              div.textContent = (e.type==="add" ? "+" : "−") + e.amount + "점: " + e.reason;
               reasonsDiv.appendChild(div);
             });
           }
@@ -129,17 +129,34 @@
           reasonInput.value = "";
         };
       }
-      window.scrollTo({ top: 0, behavior: "smooth" });
     }
 
     function saveChange(classKey, delta, reason) {
       const ref = db.ref(`classes/${classKey}`);
+      const logRef = ref.child("log");
+
       ref.child("points").transaction(p => (p || 0) + delta);
-      ref.child("log").push({
-        type: delta > 0 ? "add" : "take",
+
+      const entry = {
+        type: delta > 0 ? "add" : "remove",
         amount: Math.abs(delta),
         reason,
         ts: Date.now()
+      };
+
+      const newLog = logRef.push();
+      newLog.set(entry).then(() => {
+        // Undo button only for this session
+        const undoBtn = document.createElement("button");
+        undoBtn.textContent = "↩️ 되돌리기";
+        undoBtn.style = "margin-top:8px; padding:6px; background:#facc15; border:none; border-radius:6px; font-weight:bold;";
+        undoBtn.onclick = () => {
+          newLog.remove();
+          ref.child("points").transaction(p => (p || 0) - delta);
+          undoBtn.remove();
+        };
+        const reasonsDiv = document.getElementById(`${classKey}-reasons`);
+        reasonsDiv.appendChild(undoBtn);
       });
     }
 
