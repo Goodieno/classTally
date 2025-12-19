@@ -21,7 +21,7 @@
     .reasons { margin-top:10px; display:grid; gap:6px; }
     .reason { background:#fff; padding:6px 8px; border-radius:6px; font-size:14px; }
     .reason.add { color:#16a34a; font-weight:bold; }
-    .reason.remove { color:#dc2626; font-weight:bold; }
+    .reason.remove { color:#dc2626; font-weight:bold; } /* ✅ red for negative */
     .score { font-weight:bold; }
     .back { display:inline-block; margin-bottom:16px; color:#2563eb; text-decoration:none; }
     .empty { color:#6b7280; font-size:13px; background:#fff; padding:6px 8px; border-radius:6px; }
@@ -107,11 +107,11 @@
             const entries = [];
             snap.forEach(child => entries.push({ ...child.val(), key: child.key }));
             entries.sort((a,b) => b.ts - a.ts);   // newest first
-            const last3 = entries.slice(0,3);     // latest 3
+            const last3 = entries.slice(0,3);     // ✅ latest 3
             last3.forEach(e => {
               const div = document.createElement("div");
-              div.className = `reason ${e.type}`;
-              div.textContent = (e.type==="add" ? "+" : "−") + e.amount + "점: " + e.reason;
+              div.className = `reason ${e.type}`; // "add" or "remove"
+              div.textContent = (e.type === "add" ? "+" : "−") + e.amount + "점: " + e.reason;
               reasonsDiv.appendChild(div);
             });
           }
@@ -138,7 +138,7 @@
       ref.child("points").transaction(p => (p || 0) + delta);
 
       const entry = {
-        type: delta > 0 ? "add" : "remove",
+        type: delta > 0 ? "add" : "remove",   // ✅ unified
         amount: Math.abs(delta),
         reason,
         ts: Date.now()
