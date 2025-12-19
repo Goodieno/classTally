@@ -1,8 +1,9 @@
+<!-- Paste this into your GitHub repo as index.html -->
 <!DOCTYPE html>
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <title>학급 점수판</title>
+  <title>학급 점수판 (디버그 버전)</title>
   <style>
     body { font-family: Arial, sans-serif; background:#f9fafb; margin:0; padding:20px; }
     h1 { margin-bottom:20px; }
@@ -46,7 +47,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-auth-compat.js"></script>
 
   <script>
-    // 🔑 Your Firebase config
+    // ✅ Replace with your exact Firebase config
     const firebaseConfig = {
       apiKey: "AIzaSyDWrEaqdNQktZ9rIBG...",
       authDomain: "online-tally-system.firebaseapp.com",
@@ -57,8 +58,17 @@
       appId: "1:89585597340:web:989e55802c4ebf68f6e659"
     };
 
-    firebase.initializeApp(firebaseConfig);
-    firebase.auth().signInAnonymously().catch(console.error);
+    try {
+      firebase.initializeApp(firebaseConfig);
+      console.log("[Firebase] Initialized");
+    } catch (e) {
+      console.error("[Firebase Init Error]", e);
+    }
+
+    firebase.auth().signInAnonymously()
+      .then(() => console.log("[Auth] Signed in anonymously"))
+      .catch(err => console.error("[Auth Error]", err));
+
     const db = firebase.database();
     const view = document.getElementById("view");
 
@@ -94,13 +104,16 @@
         const scoreEl = document.getElementById(`${classKey}-score`);
         const reasonsDiv = document.getElementById(`${classKey}-reasons`);
 
-        // ✅ Listener for score updates
+        // ✅ Score listener
         db.ref(`classes/${classKey}/points`).on("value", snap => {
-          scoreEl.textContent = `총점: ${snap.val() ?? 0}`;
-        });
+          const val = snap.val();
+          console.log(`[Score Listener] ${classKey}:`, val);
+          scoreEl.textContent = `총점: ${val ?? 0}`;
+        }, err => console.error(`[Score Listener Error] ${classKey}`, err));
 
-        // ✅ Fixed listener for reasons
+        // ✅ Reason listener
         db.ref(`classes/${classKey}/log`).on("value", snap => {
+          console.log(`[Log Listener] ${classKey}:`, snap.exists() ? "has data" : "no data");
           reasonsDiv.innerHTML = "";
           if (!snap.exists()) {
             reasonsDiv.innerHTML = `<div class="empty">최근 이유가 없습니다.</div>`;
@@ -116,16 +129,18 @@
               reasonsDiv.appendChild(div);
             });
           }
-        });
+        }, err => console.error(`[Log Listener Error] ${classKey}`, err));
 
         addBtn.onclick = () => {
           const reason = reasonInput.value.trim() || "이유 없음";
+          console.log(`[Add] ${classKey}:`, reason);
           saveChange(classKey, +2, reason);
           reasonInput.value = "";
         };
 
         takeBtn.onclick = () => {
           const reason = reasonInput.value.trim() || "이유 없음";
+          console.log(`[Take] ${classKey}:`, reason);
           saveChange(classKey, -1, reason);
           reasonInput.value = "";
         };
@@ -135,13 +150,21 @@
 
     function saveChange(classKey, delta, reason) {
       const ref = db.ref(`classes/${classKey}`);
-      ref.child("points").transaction(p => (p || 0) + delta);
-      ref.child("log").push({
+      ref.child("points").transaction(p => (p || 0) + delta, (err, committed, snap) => {
+        if (err) console.error(`[Transaction Error] ${classKey}`, err);
+        else console.log(`[Transaction OK] ${classKey}:`, snap?.val());
+      });
+
+      const entry = {
         type: delta > 0 ? "add" : "take",
         amount: Math.abs(delta),
         reason,
         ts: Date.now()
-      });
+      };
+
+      ref.child("log").push(entry)
+        .then(() => console.log(`[Log Push OK] ${classKey}:`, entry))
+        .catch(err => console.error(`[Log Push Error] ${classKey}`, err));
     }
 
     function goHome() {
