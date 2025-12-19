@@ -1,33 +1,209 @@
 <!DOCTYPE html>
-<html>
+<html lang="ko">
 <head>
-  <meta charset="UTF-8">
-  <title>Test Page</title>
+  <meta charset="UTF-8" />
+  <title>학급 점수판</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body { font-family: Arial, sans-serif; background:#f9fafb; margin:0; padding:20px; }
+    h1 { margin-bottom:20px; }
+    ul { list-style:none; padding:0; }
+    li { margin:8px 0; }
+    a { text-decoration:none; color:#2563eb; font-size:18px; }
+    a:hover { text-decoration:underline; }
+    .grid { display:grid; gap:12px; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); }
+    .card { background:#fff; border:1px solid #ddd; border-radius:8px; padding:12px; }
+    .row { display:flex; justify-content:space-between; margin-bottom:10px; align-items:center; }
+    .controls { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+    .controls input { grid-column:span 2; padding:8px; border:1px solid #ccc; border-radius:6px; }
+    .controls button { padding:8px; cursor:pointer; border:none; color:#fff; font-weight:bold; border-radius:6px; }
+    .btn-add { background:#16a34a; }
+    .btn-take { background:#dc2626; }
+    .reasons { margin-top:10px; display:grid; gap:6px; }
+    .reason { background:#fff; padding:6px 8px; border-radius:6px; font-size:14px; }
+    .reason.add { color:#16a34a; font-weight:bold; }
+    .reason.remove { color:#dc2626; font-weight:bold; }
+    .score { font-weight:bold; }
+    .back { display:inline-block; margin-bottom:16px; color:#2563eb; text-decoration:none; }
+    .empty { color:#6b7280; font-size:13px; background:#fff; padding:6px 8px; border-radius:6px; }
+    .reset { background:#dc2626; color:#fff; padding:10px 16px; border:none; border-radius:6px; font-weight:bold; cursor:pointer; }
+  </style>
 </head>
 <body>
-  <h1>Menu</h1>
+  <h1>학년 선택</h1>
   <ul>
     <li><a href="#" onclick="renderGrade(1); return false;">1학년</a></li>
-    <li><a href="#" onclick="renderAdmin(); return false;">Admin</a></li>
+    <li><a href="#" onclick="renderGrade(2); return false;">2학년</a></li>
+    <li><a href="#" onclick="renderGrade(3); return false;">3학년</a></li>
+    <li><a href="#" onclick="renderGrade(4); return false;">4학년</a></li>
+    <li><a href="#" onclick="renderGrade(5); return false;">5학년</a></li>
+    <li>
+      <a href="#" onclick="renderGrade(6); return false;">6학년</a>
+      <ul>
+        <li><a href="#" onclick="renderAdmin(); return false;">Admin</a></li>
+      </ul>
+    </li>
   </ul>
 
   <div id="view"></div>
 
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-auth-compat.js"></script>
+
+  <!-- App script at the very bottom -->
   <script>
+    // Replace with your Firebase config if different
+    const firebaseConfig = {
+      apiKey: "AIzaSyDWrEqadNQ0ktZ9rIBG7yRequX_rstFFsE",
+      authDomain: "online-tally-system.firebaseapp.com",
+      databaseURL: "https://online-tally-system-default-rtdb.firebaseio.com",
+      projectId: "online-tally-system",
+      storageBucket: "online-tally-system.appspot.com",
+      messagingSenderId: "89585597340",
+      appId: "1:89585597340:web:989e55802c4ebf68f6e659",
+      measurementId: "G-ZWWG5EH8C8"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    firebase.auth().signInAnonymously().catch(() => { /* ignore for anon */ });
+
+    const db = firebase.database();
+    const view = document.getElementById("view");
+
+    // Home
+    window.goHome = function() {
+      view.innerHTML = "";
+      window.scrollTo(0, 0);
+    };
+
+    // Render a grade with 8 classes
     window.renderGrade = function(grade) {
-      document.getElementById("view").innerHTML =
-        "<h2><strong>" + grade + "학년 점수판</strong></h2>";
+      view.innerHTML = `
+        <a href="#" class="back" onclick="goHome(); return false;">← 학년으로 돌아가기</a>
+        <h2><strong>${grade}학년 학급 점수판</strong></h2>
+        <div id="classesGrid" class="grid"></div>
+      `;
+      const grid = document.getElementById("classesGrid");
+
+      for (let c = 1; c <= 8; c++) {
+        const classKey = `${grade}학년-${c}반`;
+        const card = document.createElement("div");
+        card.className = "card";
+        card.innerHTML = `
+          <div class="row">
+            <div><strong>${classKey}</strong></div>
+            <div id="${cssId(classKey)}-score"><strong>총점: 0</strong></div>
+          </div>
+          <div class="controls">
+            <input type="text" placeholder="이유 입력" id="${cssId(classKey)}-reason" />
+            <button class="btn-add" id="${cssId(classKey)}-add">+ 점수 추가</button>
+            <button class="btn-take" id="${cssId(classKey)}-take">− 점수 차감</button>
+          </div>
+          <div class="reasons" id="${cssId(classKey)}-reasons">
+            <div class="empty">최근 이유가 없습니다.</div>
+          </div>
+        `;
+        grid.appendChild(card);
+
+        const reasonInput = document.getElementById(`${cssId(classKey)}-reason`);
+        const addBtn = document.getElementById(`${cssId(classKey)}-add`);
+        const takeBtn = document.getElementById(`${cssId(classKey)}-take`);
+        const scoreEl = document.getElementById(`${cssId(classKey)}-score`);
+        const reasonsDiv = document.getElementById(`${cssId(classKey)}-reasons`);
+
+        // Live score
+        db.ref(`classes/${classKey}/points`).on("value", snap => {
+          scoreEl.innerHTML = `<strong>총점: ${snap.val() ?? 0}</strong>`;
+        });
+
+        // Live reasons (latest 3)
+        db.ref(`classes/${classKey}/log`).on("value", snap => {
+          reasonsDiv.innerHTML = "";
+          if (!snap.exists()) {
+            reasonsDiv.innerHTML = `<div class="empty">최근 이유가 없습니다.</div>`;
+            return;
+          }
+          const entries = [];
+          snap.forEach(child => entries.push({ ...child.val(), key: child.key }));
+          entries.sort((a, b) => b.ts - a.ts);
+          const last3 = entries.slice(0, 3);
+          last3.forEach(e => {
+            const div = document.createElement("div");
+            div.className = `reason ${e.type}`;
+            div.innerHTML = `<strong>${e.type === "add" ? "+" : "−"}${e.amount}점</strong>: ${escapeHtml(e.reason || "이유 없음")}`;
+            reasonsDiv.appendChild(div);
+          });
+        });
+
+        // Add / take actions
+        addBtn.onclick = () => {
+          const reason = (reasonInput.value || "").trim() || "이유 없음";
+          saveChange(classKey, +2, reason);
+          reasonInput.value = "";
+        };
+
+        takeBtn.onclick = () => {
+          const reason = (reasonInput.value || "").trim() || "이유 없음";
+          saveChange(classKey, -1, reason);
+          reasonInput.value = "";
+        };
+      }
     };
 
+    // Save a change to Firebase
+    function saveChange(classKey, delta, reason) {
+      const ref = db.ref(`classes/${classKey}`);
+      const logRef = ref.child("log");
+
+      ref.child("points").transaction(p => (p || 0) + delta);
+
+      const entry = {
+        type: delta > 0 ? "add" : "remove",
+        amount: Math.abs(delta),
+        reason,
+        ts: Date.now()
+      };
+      logRef.push(entry);
+    }
+
+    // Admin
     window.renderAdmin = function() {
-      document.getElementById("view").innerHTML =
-        "<h2><strong>관리자 메뉴</strong></h2>" +
-        "<button onclick='masterReset()'>🔄 전체 초기화</button>";
+      view.innerHTML = `
+        <a href="#" class="back" onclick="goHome(); return false;">← 학년으로 돌아가기</a>
+        <h2><strong>관리자 메뉴</strong></h2>
+        <button class="reset" onclick="masterReset(); return false;">🔄 전체 초기화</button>
+      `;
     };
 
+    // Master reset: clears points and logs for all grades/classes
     window.masterReset = function() {
-      alert("Reset clicked!");
+      if (!confirm("정말 모든 학급 데이터를 초기화하시겠습니까?")) return;
+      for (let g = 1; g <= 6; g++) {
+        for (let c = 1; c <= 8; c++) {
+          const classKey = `${g}학년-${c}반`;
+          const ref = db.ref(`classes/${classKey}`);
+          ref.child("points").set(0);
+          ref.child("log").set(null);
+        }
+      }
+      alert("전체 초기화 완료!");
     };
+
+    // Helpers
+    function cssId(s) {
+      // Safe ID for elements
+      return s.replace(/\s+/g, "_");
+    }
+    function escapeHtml(str) {
+      return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
   </script>
 </body>
 </html>
