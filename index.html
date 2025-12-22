@@ -10,7 +10,7 @@
     li { margin:8px 0; }
     a { text-decoration:none; color:#2563eb; font-size:18px; }
     a:hover { text-decoration:underline; }
-    .grid { display:grid; gap:12px; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); }
+    .grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
     .card { border:1px solid #ddd; border-radius:8px; padding:12px; background:#fff; }
     .row { display:flex; justify-content:space-between; margin-bottom:10px; }
     .controls { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
@@ -22,26 +22,48 @@
     .reason.add { color:#16a34a; font-weight:bold; background:#fff; padding:4px; border-radius:4px; }
     .reason.take { color:#dc2626; font-weight:bold; background:#fff; padding:4px; border-radius:4px; }
     .score { font-weight:bold; }
-    .class-name { font-weight:bold; font-size:20px; } /* increased size */
-    .back { display:inline-block; margin-bottom:16px; color:#2563eb; text-decoration:none; }
-    .admin-link { margin-top:20px; }
+    .class-name { font-weight:bold; font-size:20px; }
+    .back { display:inline-block; margin-top:16px; color:#2563eb; text-decoration:none; }
+    /* Hidden admin link bottom-right */
+    .admin-link {
+      position: fixed;
+      bottom: 10px;
+      right: 10px;
+      font-size: 12px;
+      opacity: 0.5;
+    }
+    .admin-link a {
+      color: #555;
+      text-decoration: none;
+    }
+    .admin-link a:hover {
+      opacity: 1;
+      text-decoration: underline;
+    }
   </style>
 </head>
 <body>
-  <h1>학년 선택</h1>
-  <ul>
-    <li><a href="#" onclick="renderGrade(1); return false;">1학년</a></li>
-    <li><a href="#" onclick="renderGrade(2); return false;">2학년</a></li>
-    <li><a href="#" onclick="renderGrade(3); return false;">3학년</a></li>
-    <li><a href="#" onclick="renderGrade(4); return false;">4학년</a></li>
-    <li><a href="#" onclick="renderGrade(5); return false;">5학년</a></li>
-    <li><a href="#" onclick="renderGrade(6); return false;">6학년</a></li>
-  </ul>
+  <!-- Root page grade links -->
+  <div id="home">
+    <h1>학년 선택</h1>
+    <ul>
+      <li><a href="#" onclick="renderGrade(1); return false;">1학년</a></li>
+      <li><a href="#" onclick="renderGrade(2); return false;">2학년</a></li>
+      <li><a href="#" onclick="renderGrade(3); return false;">3학년</a></li>
+      <li><a href="#" onclick="renderGrade(4); return false;">4학년</a></li>
+      <li><a href="#" onclick="renderGrade(5); return false;">5학년</a></li>
+      <li><a href="#" onclick="renderGrade(6); return false;">6학년</a></li>
+    </ul>
+  </div>
 
   <div id="view"></div>
 
+  <!-- Admin link always bottom-right -->
+  <div class="admin-link">
+    <a href="#" onclick="checkAdminPassword(); return false;">⚙️ Admin Panel</a>
+  </div>
+
   <script>
-    // 데이터 구조: 각 학년 8개 반
     const grades = {};
     for (let g=1; g<=6; g++) {
       grades[`${g}학년`] = {};
@@ -51,10 +73,12 @@
     }
 
     function renderGrade(grade) {
+      document.getElementById("home").style.display = "none"; // hide root links
       const view = document.getElementById("view");
-      view.innerHTML = `<a href="#" class="back" onclick="goHome(); return false;">← 학년으로 돌아가기</a>
-                        <h2>${grade}학년 학급 점수판</h2>
-                        <div class="grid"></div>`;
+      view.innerHTML = `
+        <h2>${grade}학년 학급 점수판</h2>
+        <div class="grid"></div>
+      `;
       const grid = view.querySelector(".grid");
 
       Object.entries(grades[`${grade}학년`]).forEach(([className, data]) => {
@@ -112,14 +136,13 @@
         grid.appendChild(card);
       });
 
-      // Admin link at the bottom of the grade page
-      const adminLink = document.createElement("div");
-      adminLink.className = "admin-link";
-      adminLink.innerHTML = `<a href="#" onclick="checkAdminPassword(); return false;">⚙️ Admin Panel</a>`;
-      view.appendChild(adminLink);
+      // Back link at bottom of grade view
+      const backLink = document.createElement("div");
+      backLink.className = "back-link";
+      backLink.innerHTML = `<a href="#" class="back" onclick="goHome(); return false;">← 학년으로 돌아가기</a>`;
+      view.appendChild(backLink);
     }
 
-    // Password check before showing Admin panel
     function checkAdminPassword() {
       const pw = prompt("관리자 비밀번호를 입력하세요:");
       if (pw === "delete") {
@@ -132,14 +155,14 @@
     function renderAdmin() {
       const view = document.getElementById("view");
       view.innerHTML = `
-        <a href="#" class="back" onclick="goHome(); return false;">← 학년으로 돌아가기</a>
         <h2>관리자 메뉴</h2>
         <p>학년별 점수를 초기화할 수 있습니다.</p>
         <ul id="adminList"></ul>
+        <div class="back-link">
+          <a href="#" class="back" onclick="goHome(); return false;">← 학년으로 돌아가기</a>
+        </div>
       `;
-
       const adminList = document.getElementById("adminList");
-
       for (let g = 1; g <= 6; g++) {
         const li = document.createElement("li");
         li.innerHTML = `<a href="#" onclick="resetGrade(${g}); return false;">${g}학년 점수 초기화</a>`;
@@ -157,10 +180,10 @@
     }
 
     function goHome() {
+      document.getElementById("home").style.display = "block"; // show root links again
       document.getElementById("view").innerHTML = "";
     }
 
-    // Attach globally so inline onclick works
     window.renderGrade = renderGrade;
     window.checkAdminPassword = checkAdminPassword;
     window.renderAdmin = renderAdmin;
