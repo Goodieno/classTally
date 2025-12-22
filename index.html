@@ -28,12 +28,12 @@
 <body>
   <h1>학년 선택</h1>
   <ul>
-    <li><a href="#" onclick="renderGrade(1)">1학년</a></li>
-    <li><a href="#" onclick="renderGrade(2)">2학년</a></li>
-    <li><a href="#" onclick="renderGrade(3)">3학년</a></li>
-    <li><a href="#" onclick="renderGrade(4)">4학년</a></li>
-    <li><a href="#" onclick="renderGrade(5)">5학년</a></li>
-    <li><a href="#" onclick="renderGrade(6)">6학년</a></li>
+    <li><a href="#" onclick="renderGrade(1); return false;">1학년</a></li>
+    <li><a href="#" onclick="renderGrade(2); return false;">2학년</a></li>
+    <li><a href="#" onclick="renderGrade(3); return false;">3학년</a></li>
+    <li><a href="#" onclick="renderGrade(4); return false;">4학년</a></li>
+    <li><a href="#" onclick="renderGrade(5); return false;">5학년</a></li>
+    <li><a href="#" onclick="renderGrade(6); return false;">6학년</a></li>
   </ul>
 
   <div id="view"></div>
@@ -50,7 +50,7 @@
 
     function renderGrade(grade) {
       const view = document.getElementById("view");
-      view.innerHTML = `<a href="#" class="back" onclick="goHome()">← 학년으로 돌아가기</a>
+      view.innerHTML = `<a href="#" class="back" onclick="goHome(); return false;">← 학년으로 돌아가기</a>
                         <h2>${grade}학년 학급 점수판</h2>
                         <div class="grid"></div>`;
       const grid = view.querySelector(".grid");
@@ -73,17 +73,17 @@
 
         card.querySelector(".btn-add").onclick = () => {
           const reason = reasonEl.value.trim() || "이유 없음";
-          data.points += 2; // ✅ green adds 2
+          data.points += 2;
           data.reasons.push({type:"add", amount:2, text:reason, ts:Date.now()});
           updateCard();
-          reasonEl.value = ""; // ✅ clear box
+          reasonEl.value = "";
         };
         card.querySelector(".btn-take").onclick = () => {
           const reason = reasonEl.value.trim() || "이유 없음";
-          data.points -= 1; // ✅ red subtracts 1
+          data.points -= 1;
           data.reasons.push({type:"take", amount:1, text:reason, ts:Date.now()});
           updateCard();
-          reasonEl.value = ""; // ✅ clear box
+          reasonEl.value = "";
         };
 
         function updateCard() {
@@ -111,6 +111,10 @@
     function goHome() {
       document.getElementById("view").innerHTML = "";
     }
+
+    // ✅ Attach functions globally so inline onclick works
+    window.renderGrade = renderGrade;
+    window.goHome = goHome;
   </script>
 </body>
 </html>
