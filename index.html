@@ -24,7 +24,6 @@
     .score { font-weight:bold; }
     .back { display:inline-block; margin-bottom:16px; color:#2563eb; text-decoration:none; }
     .admin-link { margin-top:20px; }
-    .reset-btn { margin-left:10px; padding:6px 10px; background:#dc2626; color:#fff; border:none; border-radius:4px; cursor:pointer; }
   </style>
 </head>
 <body>
@@ -122,18 +121,15 @@
         <a href="#" class="back" onclick="goHome(); return false;">← 학년으로 돌아가기</a>
         <h2>관리자 메뉴</h2>
         <p>학년별 점수를 초기화할 수 있습니다.</p>
-        <div id="adminGrid"></div>
+        <ul id="adminList"></ul>
       `;
 
-      const adminGrid = document.getElementById("adminGrid");
+      const adminList = document.getElementById("adminList");
 
       for (let g = 1; g <= 6; g++) {
-        const div = document.createElement("div");
-        div.innerHTML = `
-          <strong>${g}학년</strong>
-          <button class="reset-btn" onclick="resetGrade(${g}); return false;">점수 초기화</button>
-        `;
-        adminGrid.appendChild(div);
+        const li = document.createElement("li");
+        li.innerHTML = `<a href="#" onclick="resetGrade(${g}); return false;">${g}학년 점수 초기화</a>`;
+        adminList.appendChild(li);
       }
     }
 
