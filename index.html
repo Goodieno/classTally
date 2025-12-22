@@ -31,6 +31,7 @@
       right: 10px;
       font-size: 12px;
       opacity: 0.5;
+      z-index: 1000;
     }
     .admin-link a {
       color: #555;
@@ -40,11 +41,15 @@
       opacity: 1;
       text-decoration: underline;
     }
+    /* Spacer below grid */
+    .grid-spacer {
+      height: 2in;
+    }
   </style>
 </head>
 <body>
   <!-- Root page grade links -->
-  <div id="home">
+  <div id="home-links">
     <h1>학년 선택</h1>
     <ul>
       <li><a href="#" onclick="renderGrade(1); return false;">1학년</a></li>
@@ -73,7 +78,7 @@
     }
 
     function renderGrade(grade) {
-      document.getElementById("home").style.display = "none"; // hide root links
+      document.getElementById("home-links").style.display = "none"; // hide root links
       const view = document.getElementById("view");
       view.innerHTML = `
         <h2>${grade}학년 학급 점수판</h2>
@@ -136,6 +141,11 @@
         grid.appendChild(card);
       });
 
+      // Spacer below grid
+      const spacer = document.createElement("div");
+      spacer.className = "grid-spacer";
+      view.appendChild(spacer);
+
       // Back link at bottom of grade view
       const backLink = document.createElement("div");
       backLink.className = "back-link";
@@ -180,15 +190,9 @@
     }
 
     function goHome() {
-      document.getElementById("home").style.display = "block"; // show root links again
+      document.getElementById("home-links").style.display = "block"; // show root links again
       document.getElementById("view").innerHTML = "";
     }
 
     window.renderGrade = renderGrade;
-    window.checkAdminPassword = checkAdminPassword;
-    window.renderAdmin = renderAdmin;
-    window.resetGrade = resetGrade;
-    window.goHome = goHome;
-  </script>
-</body>
-</html>
+    window.checkAdmin
