@@ -23,6 +23,7 @@
     .reason.take { color:#dc2626; font-weight:bold; background:#fff; padding:4px; border-radius:4px; }
     .score { font-weight:bold; }
     .back { display:inline-block; margin-bottom:16px; color:#2563eb; text-decoration:none; }
+    .admin-link { margin-top:20px; }
   </style>
 </head>
 <body>
@@ -106,14 +107,30 @@
 
         grid.appendChild(card);
       });
+
+      // Admin link at the bottom of the classes page
+      const adminLink = document.createElement("div");
+      adminLink.className = "admin-link";
+      adminLink.innerHTML = `<a href="#" onclick="renderAdmin(); return false;">⚙️ Admin Panel</a>`;
+      view.appendChild(adminLink);
+    }
+
+    function renderAdmin() {
+      const view = document.getElementById("view");
+      view.innerHTML = `
+        <a href="#" class="back" onclick="goHome(); return false;">← 학년으로 돌아가기</a>
+        <h2>관리자 메뉴</h2>
+        <p>여기에 전체 초기화 또는 요약 기능을 추가할 수 있습니다.</p>
+      `;
     }
 
     function goHome() {
       document.getElementById("view").innerHTML = "";
     }
 
-    // ✅ Attach functions globally so inline onclick works
+    // Attach globally so inline onclick works
     window.renderGrade = renderGrade;
+    window.renderAdmin = renderAdmin;
     window.goHome = goHome;
   </script>
 </body>
