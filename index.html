@@ -8,8 +8,8 @@
     h1 { margin-bottom:20px; }
     ul { list-style:none; padding:0; }
     li { margin:8px 0; }
-    button.link-btn { background:none; border:none; color:#2563eb; font-size:18px; cursor:pointer; padding:0; }
-    button.link-btn:hover { text-decoration:underline; }
+    a { text-decoration:none; color:#2563eb; font-size:18px; }
+    a:hover { text-decoration:underline; }
     .grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
     .card { border:1px solid #ddd; border-radius:8px; padding:12px; background:#fff; }
     .row { display:flex; justify-content:space-between; margin-bottom:10px; }
@@ -52,12 +52,12 @@
   <div id="home-links">
     <h1>학년 선택</h1>
     <ul>
-      <li><button class="link-btn" onclick="renderGrade(1)">1학년</button></li>
-      <li><button class="link-btn" onclick="renderGrade(2)">2학년</button></li>
-      <li><button class="link-btn" onclick="renderGrade(3)">3학년</button></li>
-      <li><button class="link-btn" onclick="renderGrade(4)">4학년</button></li>
-      <li><button class="link-btn" onclick="renderGrade(5)">5학년</button></li>
-      <li><button class="link-btn" onclick="renderGrade(6)">6학년</button></li>
+      <li><a href="#" onclick="renderGrade(1); return false;">1학년</a></li>
+      <li><a href="#" onclick="renderGrade(2); return false;">2학년</a></li>
+      <li><a href="#" onclick="renderGrade(3); return false;">3학년</a></li>
+      <li><a href="#" onclick="renderGrade(4); return false;">4학년</a></li>
+      <li><a href="#" onclick="renderGrade(5); return false;">5학년</a></li>
+      <li><a href="#" onclick="renderGrade(6); return false;">6학년</a></li>
     </ul>
   </div>
 
@@ -70,17 +70,15 @@
 
   <script>
     const grades = {};
-    for (let g = 1; g <= 6; g++) {
+    for (let g=1; g<=6; g++) {
       grades[`${g}학년`] = {};
-      for (let c = 1; c <= 8; c++) {
-        grades[`${g}학년`][`${g}학년 ${c}반`] = { points: 0, reasons: [] };
+      for (let c=1; c<=8; c++) {
+        grades[`${g}학년`][`${g}학년 ${c}반`] = { points:0, reasons:[] };
       }
     }
 
     function renderGrade(grade) {
-      const homeEl = document.getElementById("home-links");
-      if (homeEl) homeEl.style.display = "none";
-
+      document.getElementById("home-links").style.display = "none"; // hide root links
       const view = document.getElementById("view");
       view.innerHTML = `
         <h2>${grade}학년 학급 점수판</h2>
@@ -97,7 +95,7 @@
             <div>총점: <span class="score">${data.points}</span></div>
           </div>
           <div class="controls">
-            <input type="text" placeholder="이유 입력" class="reasonInput" maxlength="30"/>
+            <input type="text" placeholder="이유 입력" class="reasonInput"/>
             <button class="btn-add">+ 점수 추가</button>
             <button class="btn-take">− 점수 차감</button>
           </div>
@@ -110,14 +108,14 @@
         card.querySelector(".btn-add").onclick = () => {
           const reason = reasonEl.value.trim() || "이유 없음";
           data.points += 2;
-          data.reasons.push({ type: "add", amount: 2, text: reason, ts: Date.now() });
+          data.reasons.push({type:"add", amount:2, text:reason, ts:Date.now()});
           updateCard();
           reasonEl.value = "";
         };
         card.querySelector(".btn-take").onclick = () => {
           const reason = reasonEl.value.trim() || "이유 없음";
           data.points -= 1;
-          data.reasons.push({ type: "take", amount: 1, text: reason, ts: Date.now() });
+          data.reasons.push({type:"take", amount:1, text:reason, ts:Date.now()});
           updateCard();
           reasonEl.value = "";
         };
@@ -135,7 +133,7 @@
               hour: "2-digit",
               minute: "2-digit"
             });
-            div.textContent = (r.type === "add" ? "+" : "−") + r.amount + "점: " + r.text + " (" + formatted + ")";
+            div.textContent = (r.type==="add"?"+":"−")+r.amount+"점: "+r.text+" ("+formatted+")";
             reasonsDiv.appendChild(div);
           });
         }
@@ -192,17 +190,9 @@
     }
 
     function goHome() {
-      const homeEl = document.getElementById("home-links");
-      if (homeEl) homeEl.style.display = "block";
+      document.getElementById("home-links").style.display = "block"; // show root links again
       document.getElementById("view").innerHTML = "";
     }
 
-    // Expose globally for inline handlers (buttons call renderGrade)
     window.renderGrade = renderGrade;
-    window.checkAdminPassword = checkAdminPassword;
-    window.renderAdmin = renderAdmin;
-    window.resetGrade = resetGrade;
-    window.goHome = goHome;
-  </script>
-</body>
-</html>
+    window.checkAdmin
