@@ -111,8 +111,18 @@
       // Admin link at the bottom of the grade page
       const adminLink = document.createElement("div");
       adminLink.className = "admin-link";
-      adminLink.innerHTML = `<a href="#" onclick="renderAdmin(); return false;">⚙️ Admin Panel</a>`;
+      adminLink.innerHTML = `<a href="#" onclick="checkAdminPassword(); return false;">⚙️ Admin Panel</a>`;
       view.appendChild(adminLink);
+    }
+
+    // Password check before showing Admin panel
+    function checkAdminPassword() {
+      const pw = prompt("관리자 비밀번호를 입력하세요:");
+      if (pw === "delete") {
+        renderAdmin();
+      } else {
+        alert("비밀번호가 올바르지 않습니다.");
+      }
     }
 
     function renderAdmin() {
@@ -148,6 +158,7 @@
 
     // Attach globally so inline onclick works
     window.renderGrade = renderGrade;
+    window.checkAdminPassword = checkAdminPassword;
     window.renderAdmin = renderAdmin;
     window.resetGrade = resetGrade;
     window.goHome = goHome;
