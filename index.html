@@ -92,11 +92,18 @@
   data.reasons.slice(-3).forEach(r => {
     const div = document.createElement("div");
     div.className = `reason ${r.type}`;
-    div.textContent = (r.type==="add"?"+":"−")+r.amount+"점: "+r.text;
+    // Add timestamp when reason is created
+    const now = new Date();
+    const formatted = now.toLocaleString("ko-KR", {
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit"
+    });
+    div.textContent = (r.type==="add"?"+":"−")+r.amount+"점: "+r.text+" ("+formatted+")";
     reasonsDiv.appendChild(div);
   });
 }
-
 
         grid.appendChild(card);
       });
@@ -108,4 +115,5 @@
   </script>
 </body>
 </html>
+
 
