@@ -1,174 +1,109 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <title>학급 점수판</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    body { font-family: Arial, sans-serif; background:#f9fafb; margin:0; padding:20px; }
+    body { font-family: Arial, sans-serif; padding:20px; background:#f9fafb; }
     h1 { margin-bottom:20px; }
     ul { list-style:none; padding:0; }
     li { margin:8px 0; }
     a { text-decoration:none; color:#2563eb; font-size:18px; }
     a:hover { text-decoration:underline; }
     .grid { display:grid; gap:12px; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); }
-    .card { background:#fff; border:1px solid #ddd; border-radius:8px; padding:12px; }
-    .row { display:flex; justify-content:space-between; margin-bottom:10px; align-items:center; }
+    .card { border:1px solid #ddd; border-radius:8px; padding:12px; background:#fff; }
+    .row { display:flex; justify-content:space-between; margin-bottom:10px; }
     .controls { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
-    .controls input { grid-column:span 2; padding:8px; border:1px solid #ccc; border-radius:6px; }
-    .controls button { padding:8px; cursor:pointer; border:none; color:#fff; font-weight:bold; border-radius:6px; }
+    .controls input { grid-column:span 2; padding:6px; }
+    .controls button { padding:8px; border:none; color:#fff; font-weight:bold; border-radius:6px; cursor:pointer; }
     .btn-add { background:#16a34a; }
     .btn-take { background:#dc2626; }
-    .reasons { margin-top:10px; display:grid; gap:6px; }
-    .reason { background:#fff; padding:6px 8px; border-radius:6px; font-size:14px; }
-    .reason.add { color:#16a34a; font-weight:bold; }
-    .reason.remove { color:#dc2626; font-weight:bold; }
+    .reasons { margin-top:10px; }
+    .reason.add { color:#16a34a; font-weight:bold; background:#fff; padding:4px; border-radius:4px; }
+    .reason.take { color:#dc2626; font-weight:bold; background:#fff; padding:4px; border-radius:4px; }
     .score { font-weight:bold; }
     .back { display:inline-block; margin-bottom:16px; color:#2563eb; text-decoration:none; }
-    .empty { color:#6b7280; font-size:13px; background:#fff; padding:6px 8px; border-radius:6px; }
-    .reset { background:#dc2626; color:#fff; padding:10px 16px; border:none; border-radius:6px; font-weight:bold; cursor:pointer; }
   </style>
 </head>
 <body>
   <h1>학년 선택</h1>
   <ul>
-    <li><a href="#" onclick="renderGrade(1); return false;">1학년</a></li>
-    <li><a href="#" onclick="renderGrade(2); return false;">2학년</a></li>
-    <li><a href="#" onclick="renderGrade(3); return false;">3학년</a></li>
-    <li><a href="#" onclick="renderGrade(4); return false;">4학년</a></li>
-    <li><a href="#" onclick="renderGrade(5); return false;">5학년</a></li>
-    <li>
-      <a href="#" onclick="renderGrade(6); return false;">6학년</a>
-      <ul>
-        <li><a href="#" onclick="renderAdmin(); return false;">Admin</a></li>
-      </ul>
-    </li>
+    <li><a href="#" onclick="renderGrade(1)">1학년</a></li>
+    <li><a href="#" onclick="renderGrade(2)">2학년</a></li>
+    <li><a href="#" onclick="renderGrade(3)">3학년</a></li>
+    <li><a href="#" onclick="renderGrade(4)">4학년</a></li>
+    <li><a href="#" onclick="renderGrade(5)">5학년</a></li>
+    <li><a href="#" onclick="renderGrade(6)">6학년</a></li>
   </ul>
 
   <div id="view"></div>
 
-  <!-- Firebase SDKs -->
-  <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-database-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-auth-compat.js"></script>
-
   <script>
-    const firebaseConfig = {
-      apiKey: "AIzaSyDWrEqadNQ0ktZ9rIBG7yRequX_rstFFsE",
-      authDomain: "online-tally-system.firebaseapp.com",
-      databaseURL: "https://online-tally-system-default-rtdb.firebaseio.com",
-      projectId: "online-tally-system",
-      storageBucket: "online-tally-system.appspot.com",
-      messagingSenderId: "89585597340",
-      appId: "1:89585597340:web:989e55802c4ebf68f6e659",
-      measurementId: "G-ZWWG5EH8C8"
-    };
+    // 데이터 구조: 각 학년 8개 반
+    const grades = {};
+    for (let g=1; g<=6; g++) {
+      grades[`${g}학년`] = {};
+      for (let c=1; c<=8; c++) {
+        grades[`${g}학년`][`${g}학년 ${c}반`] = { points:0, reasons:[] };
+      }
+    }
 
-    firebase.initializeApp(firebaseConfig);
-    firebase.auth().signInAnonymously();
+    function renderGrade(grade) {
+      const view = document.getElementById("view");
+      view.innerHTML = `<a href="#" class="back" onclick="goHome()">← 학년으로 돌아가기</a>
+                        <h2>${grade}학년 학급 점수판</h2>
+                        <div class="grid"></div>`;
+      const grid = view.querySelector(".grid");
 
-    const db = firebase.database();
-    const view = document.getElementById("view");
-
-    window.goHome = function() {
-      view.innerHTML = "";
-      window.scrollTo(0, 0);
-    };
-
-    window.renderGrade = function(grade) {
-      view.innerHTML = `
-        <a href="#" class="back" onclick="goHome(); return false;">← 학년으로 돌아가기</a>
-        <h2><strong>${grade}학년 학급 점수판</strong></h2>
-        <div id="classesGrid" class="grid"></div>
-      `;
-      const grid = document.getElementById("classesGrid");
-
-      for (let c = 1; c <= 8; c++) {
-        const classKey = `${grade}학년-${c}반`;
+      Object.entries(grades[`${grade}학년`]).forEach(([className, data]) => {
         const card = document.createElement("div");
         card.className = "card";
         card.innerHTML = `
-          <div class="row">
-            <div><strong>${classKey}</strong></div>
-            <div id="${cssId(classKey)}-score"><strong>총점: 0</strong></div>
-          </div>
+          <div class="row"><div>${className}</div><div>총점: <span class="score">${data.points}</span></div></div>
           <div class="controls">
-            <input type="text" placeholder="이유 입력" id="${cssId(classKey)}-reason" />
-            <button class="btn-add" id="${cssId(classKey)}-add">+ 점수 추가</button>
-            <button class="btn-take" id="${cssId(classKey)}-take">− 점수 차감</button>
+            <input type="text" placeholder="이유 입력" class="reasonInput"/>
+            <button class="btn-add">+ 점수 추가</button>
+            <button class="btn-take">− 점수 차감</button>
           </div>
-          <div class="reasons" id="${cssId(classKey)}-reasons">
-            <div class="empty">최근 이유가 없습니다.</div>
-          </div>
+          <div class="reasons"></div>
         `;
-        grid.appendChild(card);
+        const reasonEl = card.querySelector(".reasonInput");
+        const scoreEl = card.querySelector(".score");
+        const reasonsDiv = card.querySelector(".reasons");
 
-        const reasonInput = document.getElementById(`${cssId(classKey)}-reason`);
-        const addBtn = document.getElementById(`${cssId(classKey)}-add`);
-        const takeBtn = document.getElementById(`${cssId(classKey)}-take`);
-        const scoreEl = document.getElementById(`${cssId(classKey)}-score`);
-        const reasonsDiv = document.getElementById(`${cssId(classKey)}-reasons`);
+        card.querySelector(".btn-add").onclick = () => {
+          const reason = reasonEl.value.trim() || "이유 없음";
+          data.points += 2; // ✅ green adds 2
+          data.reasons.push({type:"add", amount:2, text:reason});
+          updateCard();
+          reasonEl.value = ""; // ✅ clear box
+        };
+        card.querySelector(".btn-take").onclick = () => {
+          const reason = reasonEl.value.trim() || "이유 없음";
+          data.points -= 1; // ✅ red subtracts 1
+          data.reasons.push({type:"take", amount:1, text:reason});
+          updateCard();
+          reasonEl.value = ""; // ✅ clear box
+        };
 
-        db.ref(`classes/${classKey}/points`).on("value", snap => {
-          scoreEl.innerHTML = `<strong>총점: ${snap.val() ?? 0}</strong>`;
-        });
-
-        // FIXED: show every new reason, keep latest 3
-        db.ref(`classes/${classKey}/log`)
-          .orderByChild("ts")
-          .limitToLast(3)
-          .on("child_added", snap => {
-            const e = snap.val();
+        function updateCard() {
+          scoreEl.textContent = data.points;
+          reasonsDiv.innerHTML = "";
+          data.reasons.slice(-3).forEach(r => {
             const div = document.createElement("div");
-            div.className = `reason ${e.type}`;
-            div.innerHTML = `<strong>${e.type === "add" ? "+" : "−"}${e.amount}점</strong>: ${escapeHtml(e.reason || "이유 없음")}`;
-
-            const empty = reasonsDiv.querySelector(".empty");
-            if (empty) empty.remove();
-
-            reasonsDiv.insertBefore(div, reasonsDiv.firstChild);
-
-            while (reasonsDiv.children.length > 3) {
-              reasonsDiv.removeChild(reasonsDiv.lastChild);
-            }
+            div.className = `reason ${r.type}`;
+            div.textContent = (r.type==="add"?"+":"−")+r.amount+"점: "+r.text;
+            reasonsDiv.appendChild(div);
           });
+        }
 
-        addBtn.onclick = () => {
-          const reason = (reasonInput.value || "").trim() || "이유 없음";
-          saveChange(classKey, +2, reason);
-          reasonInput.value = "";
-        };
-
-        takeBtn.onclick = () => {
-          const reason = (reasonInput.value || "").trim() || "이유 없음";
-          saveChange(classKey, -1, reason);
-          reasonInput.value = "";
-        };
-      }
-    };
-
-    function saveChange(classKey, delta, reason) {
-      const ref = db.ref(`classes/${classKey}`);
-      const logRef = ref.child("log");
-
-      ref.child("points").transaction(p => (p || 0) + delta);
-
-      const entry = {
-        type: delta > 0 ? "add" : "remove",
-        amount: Math.abs(delta),
-        reason,
-        ts: Date.now()
-      };
-      logRef.push(entry);
+        grid.appendChild(card);
+      });
     }
 
-    window.renderAdmin = function() {
-      view.innerHTML = `
-        <a href="#" class="back" onclick="goHome(); return false;">← 학년으로 돌아가기</a>
-        <h2><strong>관리자 메뉴</strong></h2>
-        <button class="reset" onclick="masterReset(); return false;">🔄 전체 초기화</button>
-      `;
-    };
-
-    window.masterReset = function() {
-      if (!confirm
+    function goHome() {
+      document.getElementById("view").innerHTML = "";
+    }
+  </script>
+</body>
+</html>
