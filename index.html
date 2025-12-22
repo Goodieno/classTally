@@ -74,36 +74,35 @@
         card.querySelector(".btn-add").onclick = () => {
           const reason = reasonEl.value.trim() || "이유 없음";
           data.points += 2; // ✅ green adds 2
-          data.reasons.push({type:"add", amount:2, text:reason});
-          function updateCard() {   scoreEl.textContent = data.points;   reasonsDiv.innerHTML = "";   data.reasons.slice(-3).forEach(r => {     const div = document.createElement("div");     div.className = `reason ${r.type}`;     div.textContent = (r.type==="add"?"+":"−")+r.amount+"점: "+r.text;     reasonsDiv.appendChild(div);   }); }();
+          data.reasons.push({type:"add", amount:2, text:reason, ts:Date.now()});
+          updateCard();
           reasonEl.value = ""; // ✅ clear box
         };
         card.querySelector(".btn-take").onclick = () => {
           const reason = reasonEl.value.trim() || "이유 없음";
           data.points -= 1; // ✅ red subtracts 1
-          data.reasons.push({type:"take", amount:1, text:reason});
+          data.reasons.push({type:"take", amount:1, text:reason, ts:Date.now()});
           updateCard();
           reasonEl.value = ""; // ✅ clear box
         };
 
         function updateCard() {
-  scoreEl.textContent = data.points;
-  reasonsDiv.innerHTML = "";
-  data.reasons.slice(-3).forEach(r => {
-    const div = document.createElement("div");
-    div.className = `reason ${r.type}`;
-    // Add timestamp when reason is created
-    const now = new Date();
-    const formatted = now.toLocaleString("ko-KR", {
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit"
-    });
-    div.textContent = (r.type==="add"?"+":"−")+r.amount+"점: "+r.text+" ("+formatted+")";
-    reasonsDiv.appendChild(div);
-  });
-}
+          scoreEl.textContent = data.points;
+          reasonsDiv.innerHTML = "";
+          data.reasons.slice(-3).forEach(r => {
+            const div = document.createElement("div");
+            div.className = `reason ${r.type}`;
+            const date = new Date(r.ts);
+            const formatted = date.toLocaleString("ko-KR", {
+              month: "2-digit",
+              day: "2-digit",
+              hour: "2-digit",
+              minute: "2-digit"
+            });
+            div.textContent = (r.type==="add"?"+":"−")+r.amount+"점: "+r.text+" ("+formatted+")";
+            reasonsDiv.appendChild(div);
+          });
+        }
 
         grid.appendChild(card);
       });
@@ -115,5 +114,3 @@
   </script>
 </body>
 </html>
-
-
