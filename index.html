@@ -24,6 +24,7 @@
     .score { font-weight:bold; }
     .back { display:inline-block; margin-bottom:16px; color:#2563eb; text-decoration:none; }
     .admin-link { margin-top:20px; }
+    .reset-btn { margin-left:10px; padding:6px 10px; background:#dc2626; color:#fff; border:none; border-radius:4px; cursor:pointer; }
   </style>
 </head>
 <body>
@@ -108,7 +109,7 @@
         grid.appendChild(card);
       });
 
-      // ✅ Admin link at the bottom of the grade page
+      // Admin link at the bottom of the grade page
       const adminLink = document.createElement("div");
       adminLink.className = "admin-link";
       adminLink.innerHTML = `<a href="#" onclick="renderAdmin(); return false;">⚙️ Admin Panel</a>`;
@@ -120,8 +121,29 @@
       view.innerHTML = `
         <a href="#" class="back" onclick="goHome(); return false;">← 학년으로 돌아가기</a>
         <h2>관리자 메뉴</h2>
-        <p>여기에 전체 초기화 또는 요약 기능을 추가할 수 있습니다.</p>
+        <p>학년별 점수를 초기화할 수 있습니다.</p>
+        <div id="adminGrid"></div>
       `;
+
+      const adminGrid = document.getElementById("adminGrid");
+
+      for (let g = 1; g <= 6; g++) {
+        const div = document.createElement("div");
+        div.innerHTML = `
+          <strong>${g}학년</strong>
+          <button class="reset-btn" onclick="resetGrade(${g}); return false;">점수 초기화</button>
+        `;
+        adminGrid.appendChild(div);
+      }
+    }
+
+    function resetGrade(grade) {
+      if (!confirm(`${grade}학년의 모든 점수를 초기화하시겠습니까?`)) return;
+      Object.values(grades[`${grade}학년`]).forEach(cls => {
+        cls.points = 0;
+        cls.reasons = [];
+      });
+      alert(`${grade}학년 점수가 초기화되었습니다.`);
     }
 
     function goHome() {
@@ -131,6 +153,7 @@
     // Attach globally so inline onclick works
     window.renderGrade = renderGrade;
     window.renderAdmin = renderAdmin;
+    window.resetGrade = resetGrade;
     window.goHome = goHome;
   </script>
 </body>
