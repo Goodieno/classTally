@@ -26,7 +26,7 @@
 
     button.link-btn:hover { text-decoration: underline; }
 
-    /* ===== Leader display ===== */
+    /* ===== Leader ===== */
     .leader {
       margin-left: 10px;
       font-weight: bold;
@@ -104,150 +104,203 @@
 
     .btn-add { background: #16a34a; }
     .btn-take { background: #dc2626; }
+    .btn-undo { background: #6b7280; }
 
-    .reasons { margin-top: 10px; }
+    /* ===== Reasons ===== */
+    .reasons {
+      margin-top: 10px;
+      max-height: 120px;
+      overflow-y: auto;
+      border-top: 1px solid #eee;
+      padding-top: 6px;
+    }
+
+    .reason {
+      font-size: 14px;
+      margin-bottom: 4px;
+    }
 
     .reason.add { color: #16a34a; font-weight: bold; }
     .reason.take { color: #dc2626; font-weight: bold; }
 
-    .back { margin-bottom: 16px; display: inline-block; }
-    .grid-spacer { height: 2in; }
-
-    .admin-link {
-      position: fixed;
-      bottom: 10px;
-      right: 10px;
+    .timestamp {
+      color: #555;
+      font-weight: normal;
+      margin-left: 4px;
       font-size: 12px;
-      opacity: 0.6;
     }
+
+    .back { margin-bottom: 16px; display: inline-block; }
   </style>
 </head>
 
 <body>
 
-  <div id="home">
-    <h1>학년 선택</h1>
-    <ul id="grade-links"></ul>
-  </div>
+<div id="home">
+  <h1>학년 선택</h1>
+  <ul id="grade-links"></ul>
+</div>
 
-  <div id="view"></div>
+<div id="view"></div>
 
-  <div class="admin-link">
-    <button class="link-btn" id="admin-link">⚙️ Admin Panel</button>
-  </div>
+<script>
+  /* ===== DATA ===== */
+  const grades = {};
+  for (let g = 1; g <= 6; g++) {
+    grades[g] = {};
+    for (let c = 1; c <= 8; c++) {
+      grades[g][`${g}학년 ${c}반`] = { points: 0, reasons: [] };
+    }
+  }
 
-  <script>
-    const grades = {};
+  /* ===== HOME ===== */
+  function renderHome() {
+    const list = document.getElementById("grade-links");
+    list.innerHTML = "";
+
     for (let g = 1; g <= 6; g++) {
-      grades[g] = {};
-      for (let c = 1; c <= 8; c++) {
-        grades[g][`${g}학년 ${c}반`] = { points: 0, reasons: [] };
+      const entries = Object.entries(grades[g]);
+      const max = Math.max(...entries.map(e => e[1].points));
+      let leaderHTML = "";
+
+      if (max > 0) {
+        const leaders = entries.filter(e => e[1].points === max);
+        leaderHTML = leaders.length === 1
+          ? `<span class="leader">${leaders[0][0]} <span class="leader-score">(${max})</span>
+             <span class="badge leader-badge">👑 LEADER</span></span>`
+          : leaders.map(l =>
+             `<span class="leader">${l[0]} <span class="leader-score">(${max})</span>
+             <span class="badge tie-badge">🥊 TIE</span></span>`).join("");
       }
+
+      const li = document.createElement("li");
+      li.innerHTML = `<button class="link-btn" data-grade="${g}">${g}학년</button>${leaderHTML}`;
+      list.appendChild(li);
     }
+  }
 
-    function renderHome() {
-      const list = document.getElementById("grade-links");
-      list.innerHTML = "";
+  /* ===== GRADE VIEW ===== */
+  function renderGrade(grade) {
+    document.getElementById("home").style.display = "none";
+    const view = document.getElementById("view");
 
-      for (let g = 1; g <= 6; g++) {
-        const entries = Object.entries(grades[g]);
-        const max = Math.max(...entries.map(e => e[1].points));
-        let leaderHTML = "";
+    view.innerHTML = `
+      <button class="link-btn back" id="back-home">← 학년으로 돌아가기</button>
+      <h2>${grade}학년 학급 점수판</h2>
+      <div class="grid"></div>
+    `;
 
-        if (max > 0) {
-          const leaders = entries.filter(e => e[1].points === max);
-          leaderHTML = leaders.length === 1
-            ? `<span class="leader">${leaders[0][0]} <span class="leader-score">(${max})</span>
-               <span class="badge leader-badge">👑 LEADER</span></span>`
-            : leaders.map(l =>
-               `<span class="leader">${l[0]} <span class="leader-score">(${max})</span>
-               <span class="badge tie-badge">🥊 TIE</span></span>`).join("");
-        }
+    const grid = view.querySelector(".grid");
 
-        const li = document.createElement("li");
-        li.innerHTML = `<button class="link-btn" data-grade="${g}">${g}학년</button>${leaderHTML}`;
-        list.appendChild(li);
-      }
-    }
+    Object.entries(grades[grade]).forEach(([className, data]) => {
+      let undoStack = null;
 
-    function renderGrade(grade) {
-      document.getElementById("home").style.display = "none";
-      const view = document.getElementById("view");
+      const card = document.createElement("div");
+      card.className = "card";
 
-      view.innerHTML = `
-        <button class="link-btn back" id="back-home">← 학년으로 돌아가기</button>
-        <h2>${grade}학년 학급 점수판</h2>
-        <div class="grid"></div>
+      card.innerHTML = `
+        <div class="row">
+          <div class="class-name">${className}</div>
+          <div>총점: <span class="points score">${data.points}</span></div>
+        </div>
+
+        <div class="controls">
+          <input type="text" placeholder="이유 입력" maxlength="30">
+          <button class="btn-add">+ 점수 추가</button>
+          <button class="btn-take">− 점수 차감</button>
+        </div>
+
+        <div class="controls undo-area"></div>
+        <div class="reasons"></div>
       `;
 
-      const grid = view.querySelector(".grid");
+      const scoreEl = card.querySelector(".score");
+      const input = card.querySelector("input");
+      const reasonsDiv = card.querySelector(".reasons");
+      const undoArea = card.querySelector(".undo-area");
 
-      Object.entries(grades[grade]).forEach(([className, data]) => {
-        const card = document.createElement("div");
-        card.className = "card";
-
-        card.innerHTML = `
-          <div class="row">
-            <div class="class-name">${className}</div>
-            <div>총점: <span class="points score">${data.points}</span></div>
-          </div>
-
-          <div class="controls">
-            <input type="text" placeholder="이유 입력" maxlength="30">
-            <button class="btn-add">+ 점수 추가</button>
-            <button class="btn-take">− 점수 차감</button>
-          </div>
-
-          <div class="reasons"></div>
-        `;
-
-        const scoreEl = card.querySelector(".score");
-        const input = card.querySelector("input");
-        const reasonsDiv = card.querySelector(".reasons");
-
-        function update() {
-          scoreEl.textContent = data.points;
-          reasonsDiv.innerHTML = "";
-          data.reasons.slice(-3).forEach(r => {
-            const d = document.createElement("div");
-            d.className = `reason ${r.type}`;
-            d.textContent = `${r.type === "add" ? "+" : "−"}${r.amount}점: ${r.text}`;
-            reasonsDiv.appendChild(d);
+      function renderReasons() {
+        reasonsDiv.innerHTML = "";
+        data.reasons.forEach(r => {
+          const d = document.createElement("div");
+          d.className = `reason ${r.type}`;
+          const t = new Date(r.ts).toLocaleString("ko-KR", {
+            month: "2-digit",
+            day: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit"
           });
-          renderHome();
-        }
+          d.innerHTML = `${r.type === "add" ? "+" : "−"}${r.amount}점: ${r.text}
+            <span class="timestamp">(${t})</span>`;
+          reasonsDiv.appendChild(d);
+        });
+      }
 
-        // 🔑 FIX: render existing reasons immediately
-        update();
-
-        card.querySelector(".btn-add").onclick = () => {
-          data.points += 2;
-          data.reasons.push({ type: "add", amount: 2, text: input.value || "이유 없음" });
-          input.value = "";
-          update();
-        };
-
-        card.querySelector(".btn-take").onclick = () => {
-          data.points -= 1;
-          data.reasons.push({ type: "take", amount: 1, text: input.value || "이유 없음" });
-          input.value = "";
-          update();
-        };
-
-        grid.appendChild(card);
-      });
-    }
-
-    document.addEventListener("click", e => {
-      if (e.target.dataset.grade) renderGrade(Number(e.target.dataset.grade));
-      if (e.target.id === "back-home") {
-        document.getElementById("view").innerHTML = "";
-        document.getElementById("home").style.display = "block";
+      function update() {
+        scoreEl.textContent = data.points;
+        renderReasons();
         renderHome();
       }
-    });
 
-    renderHome();
-  </script>
+      update(); // ✅ render immediately
+
+      function addUndoButton() {
+        undoArea.innerHTML = `<button class="btn-undo">↩ Undo</button>`;
+        undoArea.querySelector("button").onclick = () => {
+          if (!undoStack) return;
+          data.points -= undoStack.delta;
+          data.reasons.pop();
+          undoStack = null;
+          undoArea.innerHTML = "";
+          update();
+        };
+      }
+
+      card.querySelector(".btn-add").onclick = () => {
+        const r = {
+          type: "add",
+          amount: 2,
+          text: input.value || "이유 없음",
+          ts: Date.now()
+        };
+        data.points += 2;
+        data.reasons.push(r);
+        undoStack = { delta: 2 };
+        input.value = "";
+        addUndoButton();
+        update();
+      };
+
+      card.querySelector(".btn-take").onclick = () => {
+        const r = {
+          type: "take",
+          amount: 1,
+          text: input.value || "이유 없음",
+          ts: Date.now()
+        };
+        data.points -= 1;
+        data.reasons.push(r);
+        undoStack = { delta: -1 };
+        input.value = "";
+        addUndoButton();
+        update();
+      };
+
+      grid.appendChild(card);
+    });
+  }
+
+  document.addEventListener("click", e => {
+    if (e.target.dataset.grade) renderGrade(Number(e.target.dataset.grade));
+    if (e.target.id === "back-home") {
+      document.getElementById("view").innerHTML = "";
+      document.getElementById("home").style.display = "block";
+      renderHome();
+    }
+  });
+
+  renderHome();
+</script>
+
 </body>
 </html>
