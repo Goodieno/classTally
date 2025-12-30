@@ -43,19 +43,26 @@
     }
 
     .badge {
-      background: #16a34a;
-      color: white;
       font-size: 12px;
       padding: 2px 6px;
       border-radius: 6px;
       margin-left: 6px;
+      color: #fff;
+    }
+
+    .badge.leader-badge {
+      background: #16a34a;
+    }
+
+    .badge.tie-badge {
+      background: #ca8a04;
     }
 
     /* ===== Grid layout ===== */
     .grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      max-width: 960px; /* max 3 cards */
+      max-width: 960px;
       margin: 0 auto;
       gap: 12px;
     }
@@ -80,7 +87,7 @@
     }
 
     .card .points {
-      color: #14532d; /* forest green */
+      color: #14532d;
       font-weight: bold;
     }
 
@@ -110,15 +117,8 @@
 
     .reasons { margin-top: 10px; }
 
-    .reason.add {
-      color: #16a34a;
-      font-weight: bold;
-    }
-
-    .reason.take {
-      color: #dc2626;
-      font-weight: bold;
-    }
+    .reason.add { color: #16a34a; font-weight: bold; }
+    .reason.take { color: #dc2626; font-weight: bold; }
 
     .back {
       margin-bottom: 16px;
@@ -127,7 +127,6 @@
 
     .grid-spacer { height: 2in; }
 
-    /* Admin link */
     .admin-link {
       position: fixed;
       bottom: 10px;
@@ -142,7 +141,6 @@
 
 <body>
 
-  <!-- ===== HOME ===== -->
   <div id="home">
     <h1>학년 선택</h1>
     <ul id="grade-links"></ul>
@@ -164,7 +162,7 @@
       }
     }
 
-    /* ===== HOME RENDER ===== */
+    /* ===== HOME ===== */
     function renderHome() {
       const list = document.getElementById("grade-links");
       list.innerHTML = "";
@@ -174,15 +172,26 @@
         const max = Math.max(...entries.map(e => e[1].points));
 
         let leaderHTML = "";
+
         if (max > 0) {
           const leaders = entries.filter(e => e[1].points === max);
+
           if (leaders.length === 1) {
             leaderHTML = `
               <span class="leader">
                 ${leaders[0][0]}
                 <span class="leader-score">(${max})</span>
-                <span class="badge">LEADER</span>
-              </span>`;
+                <span class="badge leader-badge">LEADER</span>
+              </span>
+            `;
+          } else {
+            leaderHTML = leaders.map(l => `
+              <span class="leader">
+                ${l[0]}
+                <span class="leader-score">(${max})</span>
+                <span class="badge tie-badge">TIE</span>
+              </span>
+            `).join("");
           }
         }
 
@@ -263,22 +272,6 @@
       view.appendChild(document.createElement("div")).className = "grid-spacer";
     }
 
-    /* ===== ADMIN ===== */
-    function renderAdmin() {
-      document.getElementById("home").style.display = "none";
-      const view = document.getElementById("view");
-
-      view.innerHTML = `
-        <button class="link-btn back" id="back-home">← 학년으로 돌아가기</button>
-        <h2>관리자 메뉴</h2>
-        <ul>
-          ${[1,2,3,4,5,6].map(g =>
-            `<li><button class="link-btn" data-reset="${g}">${g}학년 점수 초기화</button></li>`
-          ).join("")}
-        </ul>
-      `;
-    }
-
     /* ===== EVENTS ===== */
     document.addEventListener("click", e => {
       if (e.target.dataset.grade) renderGrade(Number(e.target.dataset.grade));
@@ -288,22 +281,12 @@
         renderHome();
       }
       if (e.target.id === "admin-link") {
-        if (prompt("비밀번호") === "delete") renderAdmin();
-      }
-      if (e.target.dataset.reset) {
-        const g = Number(e.target.dataset.reset);
-        if (confirm("초기화하시겠습니까?")) {
-          Object.values(grades[g]).forEach(c => {
-            c.points = 0;
-            c.reasons = [];
-          });
-          alert("초기화 완료");
-          renderHome();
+        if (prompt("비밀번호") === "delete") {
+          alert("관리자 페이지는 아직 확장 예정입니다.");
         }
       }
     });
 
-    /* ===== INIT ===== */
     renderHome();
   </script>
 </body>
