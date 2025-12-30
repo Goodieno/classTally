@@ -114,6 +114,22 @@ firebase.initializeApp({
 const db = firebase.database();
 let lastUndo = null;
 
+/* 🔹 Initialize grades and classes if missing */
+function initGrades() {
+  for (let g = 1; g <= 6; g++) {
+    const gradeRef = db.ref(`grades/${g}`);
+    gradeRef.once("value").then(snapshot => {
+      if (!snapshot.exists()) {
+        // Default classes per grade (change as needed)
+        const defaultClasses = { A: { points: 0, reasons: [] }, B: { points: 0, reasons: [] } };
+        gradeRef.set(defaultClasses);
+        console.log(`Grade ${g} initialized`);
+      }
+    });
+  }
+}
+initGrades();
+
 /* ROUTER */
 function router() {
   const hash = location.hash;
