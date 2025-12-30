@@ -45,7 +45,7 @@
       border-radius:999px;
       font-size:12px;
       font-weight:bold;
-      background:#facc15; /* gold */
+      background:#facc15;
       color:#000;
       box-shadow:0 0 0 1px rgba(0,0,0,0.15);
     }
@@ -54,11 +54,9 @@
     .card { border:1px solid #ddd; border-radius:8px; padding:12px; background:#fff; }
     .row { display:flex; justify-content:space-between; margin-bottom:10px; }
     .controls { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
-    .controls input { grid-column:span 2; padding:6px; }
     .controls button { padding:8px; border:none; color:#fff; font-weight:bold; border-radius:6px; cursor:pointer; }
     .btn-add { background:#16a34a; }
     .btn-take { background:#dc2626; }
-    .reasons { margin-top:10px; }
     .back { display:inline-block; margin-bottom:16px; }
     .grid-spacer { height:2in; }
 
@@ -77,30 +75,12 @@
 <div id="home">
   <h1>학년 선택</h1>
   <ul>
-    <li>
-      <button class="link-btn" data-grade="1">1학년</button>
-      <span class="leader" data-leader="1"></span>
-    </li>
-    <li>
-      <button class="link-btn" data-grade="2">2학년</button>
-      <span class="leader" data-leader="2"></span>
-    </li>
-    <li>
-      <button class="link-btn" data-grade="3">3학년</button>
-      <span class="leader" data-leader="3"></span>
-    </li>
-    <li>
-      <button class="link-btn" data-grade="4">4학년</button>
-      <span class="leader" data-leader="4"></span>
-    </li>
-    <li>
-      <button class="link-btn" data-grade="5">5학년</button>
-      <span class="leader" data-leader="5"></span>
-    </li>
-    <li>
-      <button class="link-btn" data-grade="6">6학년</button>
-      <span class="leader" data-leader="6"></span>
-    </li>
+    <li><button class="link-btn" data-grade="1">1학년</button><span class="leader" data-leader="1"></span></li>
+    <li><button class="link-btn" data-grade="2">2학년</button><span class="leader" data-leader="2"></span></li>
+    <li><button class="link-btn" data-grade="3">3학년</button><span class="leader" data-leader="3"></span></li>
+    <li><button class="link-btn" data-grade="4">4학년</button><span class="leader" data-leader="4"></span></li>
+    <li><button class="link-btn" data-grade="5">5학년</button><span class="leader" data-leader="5"></span></li>
+    <li><button class="link-btn" data-grade="6">6학년</button><span class="leader" data-leader="6"></span></li>
   </ul>
 </div>
 
@@ -120,27 +100,26 @@
     }
   }
 
-  /* UPDATE HOME LEADERS + BADGE */
+  /* UPDATE LEADERS (NO LEADER IF ALL 0) */
   function updateLeaders() {
     for (let g = 1; g <= 6; g++) {
       const leaderEl = document.querySelector(`[data-leader="${g}"]`);
-      let best = null;
+      const entries = Object.entries(grades[`${g}학년`]);
 
-      Object.entries(grades[`${g}학년`]).forEach(([name, data]) => {
-        if (!best || data.points > best.points) {
-          best = { name, points: data.points };
-        }
-      });
+      const maxPoints = Math.max(...entries.map(([_, d]) => d.points));
 
-      if (best && best.points > 0) {
-        leaderEl.innerHTML = `
-          <span class="badge">🏆 LEADER</span>
-          <span class="class">${best.name}</span>
-          <span class="score">${best.points}</span>
-        `;
-      } else {
+      if (maxPoints <= 0) {
         leaderEl.innerHTML = "";
+        continue;
       }
+
+      const [leaderName] = entries.find(([_, d]) => d.points === maxPoints);
+
+      leaderEl.innerHTML = `
+        <span class="badge">🏆 LEADER</span>
+        <span class="class">${leaderName}</span>
+        <span class="score">${maxPoints}</span>
+      `;
     }
   }
 
@@ -204,6 +183,7 @@
   function renderAdmin() {
     document.getElementById("home").style.display = "none";
     const view = document.getElementById("view");
+
     view.innerHTML = `
       <button class="link-btn back" id="back-home">← 학년으로 돌아가기</button>
       <h2>관리자 메뉴</h2>
