@@ -12,9 +12,7 @@
     }
 
     h1 { margin-bottom: 20px; }
-
     ul { list-style: none; padding: 0; }
-
     li { margin: 10px 0; }
 
     button.link-btn {
@@ -26,21 +24,17 @@
       padding: 0;
     }
 
-    button.link-btn:hover {
-      text-decoration: underline;
-    }
+    button.link-btn:hover { text-decoration: underline; }
 
     /* ===== Leader display ===== */
     .leader {
       margin-left: 10px;
       font-weight: bold;
       color: #166534;
+      white-space: nowrap;
     }
 
-    .leader-score {
-      color: #000;
-      margin-left: 4px;
-    }
+    .leader-score { color: #000; margin-left: 4px; }
 
     .badge {
       font-size: 12px;
@@ -48,17 +42,15 @@
       border-radius: 6px;
       margin-left: 6px;
       color: #fff;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
     }
 
-    .badge.leader-badge {
-      background: #16a34a;
-    }
+    .leader-badge { background: #16a34a; }
+    .tie-badge { background: #ca8a04; }
 
-    .badge.tie-badge {
-      background: #ca8a04;
-    }
-
-    /* ===== Grid layout ===== */
+    /* ===== Grid ===== */
     .grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -80,18 +72,16 @@
       margin-bottom: 10px;
     }
 
-    /* ===== Card text styling ===== */
-    .card .class-name {
+    .class-name {
       color: #2563eb;
       font-weight: bold;
     }
 
-    .card .points {
+    .points {
       color: #14532d;
       font-weight: bold;
     }
 
-    /* ===== Controls ===== */
     .controls {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -120,11 +110,7 @@
     .reason.add { color: #16a34a; font-weight: bold; }
     .reason.take { color: #dc2626; font-weight: bold; }
 
-    .back {
-      margin-bottom: 16px;
-      display: inline-block;
-    }
-
+    .back { margin-bottom: 16px; display: inline-block; }
     .grid-spacer { height: 2in; }
 
     .admin-link {
@@ -134,8 +120,6 @@
       font-size: 12px;
       opacity: 0.6;
     }
-
-    .admin-link:hover { opacity: 1; }
   </style>
 </head>
 
@@ -153,7 +137,6 @@
   </div>
 
   <script>
-    /* ===== DATA ===== */
     const grades = {};
     for (let g = 1; g <= 6; g++) {
       grades[g] = {};
@@ -162,7 +145,6 @@
       }
     }
 
-    /* ===== HOME ===== */
     function renderHome() {
       const list = document.getElementById("grade-links");
       list.innerHTML = "";
@@ -170,41 +152,24 @@
       for (let g = 1; g <= 6; g++) {
         const entries = Object.entries(grades[g]);
         const max = Math.max(...entries.map(e => e[1].points));
-
         let leaderHTML = "";
 
         if (max > 0) {
           const leaders = entries.filter(e => e[1].points === max);
-
-          if (leaders.length === 1) {
-            leaderHTML = `
-              <span class="leader">
-                ${leaders[0][0]}
-                <span class="leader-score">(${max})</span>
-                <span class="badge leader-badge">LEADER</span>
-              </span>
-            `;
-          } else {
-            leaderHTML = leaders.map(l => `
-              <span class="leader">
-                ${l[0]}
-                <span class="leader-score">(${max})</span>
-                <span class="badge tie-badge">TIE</span>
-              </span>
-            `).join("");
-          }
+          leaderHTML = leaders.length === 1
+            ? `<span class="leader">${leaders[0][0]} <span class="leader-score">(${max})</span>
+               <span class="badge leader-badge">👑 LEADER</span></span>`
+            : leaders.map(l =>
+               `<span class="leader">${l[0]} <span class="leader-score">(${max})</span>
+               <span class="badge tie-badge">🥊 TIE</span></span>`).join("");
         }
 
         const li = document.createElement("li");
-        li.innerHTML = `
-          <button class="link-btn" data-grade="${g}">${g}학년</button>
-          ${leaderHTML}
-        `;
+        li.innerHTML = `<button class="link-btn" data-grade="${g}">${g}학년</button>${leaderHTML}`;
         list.appendChild(li);
       }
     }
 
-    /* ===== GRADE VIEW ===== */
     function renderGrade(grade) {
       document.getElementById("home").style.display = "none";
       const view = document.getElementById("view");
@@ -252,6 +217,9 @@
           renderHome();
         }
 
+        // 🔑 FIX: render existing reasons immediately
+        update();
+
         card.querySelector(".btn-add").onclick = () => {
           data.points += 2;
           data.reasons.push({ type: "add", amount: 2, text: input.value || "이유 없음" });
@@ -268,22 +236,14 @@
 
         grid.appendChild(card);
       });
-
-      view.appendChild(document.createElement("div")).className = "grid-spacer";
     }
 
-    /* ===== EVENTS ===== */
     document.addEventListener("click", e => {
       if (e.target.dataset.grade) renderGrade(Number(e.target.dataset.grade));
       if (e.target.id === "back-home") {
         document.getElementById("view").innerHTML = "";
         document.getElementById("home").style.display = "block";
         renderHome();
-      }
-      if (e.target.id === "admin-link") {
-        if (prompt("비밀번호") === "delete") {
-          alert("관리자 페이지는 아직 확장 예정입니다.");
-        }
       }
     });
 
