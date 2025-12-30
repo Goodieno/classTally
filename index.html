@@ -9,98 +9,29 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
 <style>
-body {
-  font-family: Arial, sans-serif;
-  margin: 20px;
-}
-
+body { font-family: Arial, sans-serif; margin: 20px; }
 a { text-decoration: none; }
-
-button {
-  cursor: pointer;
-  padding: 6px 10px;
-}
-
-.admin-btn {
-  position: fixed;
-  top: 10px;
-  right: 10px;
-}
-
-/* HOME */
-#grade-links li {
-  font-size: 20px;
-  margin: 10px 0;
-}
-
-/* GRID */
-.grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  max-width: 900px;
-  margin: auto;
-  gap: 15px;
-  justify-content: center;
-}
-
-/* CARD */
-.card {
-  border: 1px solid #ccc;
-  padding: 12px;
-  border-radius: 6px;
-}
-
-.class-name {
-  color: #1d4ed8;
-  font-weight: bold;
-  font-size: 18px;
-}
-
-.points {
-  color: #14532d;
-  font-weight: bold;
-  font-size: 22px;
-}
-
-/* REASONS */
-.reasons {
-  background: #f3f4f6;
-  padding: 6px;
-  margin-top: 6px;
-  max-height: 90px;
-  overflow-y: auto;
-}
-
-.reason.plus {
-  color: #14532d;
-  font-weight: bold;
-}
-
-.reason.minus {
-  color: #b91c1c;
-  font-weight: bold;
-}
-
-.reason-time {
-  font-size: 11px;
-  opacity: 0.7;
-}
-
-/* BADGES */
-.badge {
-  margin-left: 6px;
-}
+button { cursor: pointer; padding: 6px 10px; }
+.admin-btn { position: fixed; top: 10px; right: 10px; }
+#grade-links li { font-size: 20px; margin: 10px 0; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); max-width: 900px; margin: auto; gap: 15px; justify-content: center; }
+.card { border: 1px solid #ccc; padding: 12px; border-radius: 6px; }
+.class-name { color: #1d4ed8; font-weight: bold; font-size: 18px; }
+.points { color: #14532d; font-weight: bold; font-size: 22px; }
+.reasons { background: #f3f4f6; padding: 6px; margin-top: 6px; max-height: 90px; overflow-y: auto; }
+.reason.plus { color: #14532d; font-weight: bold; }
+.reason.minus { color: #b91c1c; font-weight: bold; }
+.reason-time { font-size: 11px; opacity: 0.7; }
+.badge { margin-left: 6px; }
 </style>
 </head>
 
 <body>
-
-<button class="admin-btn" onclick="goAdmin()">Admin</button>
-
+<button class="admin-btn" onclick="goAdmin()">관리자</button>
 <div id="app"></div>
 
 <script>
-/* 🔥 FIREBASE */
+/* 🔥 Firebase setup */
 firebase.initializeApp({
   apiKey: "AIzaSyDWrEqadNQ0ktZ9rIBG7yRequX_rstFFsE",
   authDomain: "online-tally-system.firebaseapp.com",
@@ -114,23 +45,22 @@ firebase.initializeApp({
 const db = firebase.database();
 let lastUndo = null;
 
-/* 🔹 Initialize grades and classes if missing */
-function initGrades() {
+/* 🔹 Ensure grades exist (safe, won't overwrite classes) */
+function restoreGrades() {
   for (let g = 1; g <= 6; g++) {
     const gradeRef = db.ref(`grades/${g}`);
     gradeRef.once("value").then(snapshot => {
       if (!snapshot.exists()) {
-        // Default classes per grade (change as needed)
-        const defaultClasses = { A: { points: 0, reasons: [] }, B: { points: 0, reasons: [] } };
+        const defaultClasses = { "A반": 0, "B반": 0 };
         gradeRef.set(defaultClasses);
-        console.log(`Grade ${g} initialized`);
+        console.log(`${g}학년 초기화 완료`);
       }
     });
   }
 }
-initGrades();
+restoreGrades();
 
-/* ROUTER */
+/* Router */
 function router() {
   const hash = location.hash;
   if (hash.startsWith("#grade")) renderGrade(hash.split("-")[1]);
@@ -139,7 +69,7 @@ function router() {
 }
 window.onhashchange = router;
 
-/* HOME */
+/* HOME page: show leading class per grade */
 function renderHome() {
   app.innerHTML = `<ul id="grade-links"></ul>`;
   const ul = document.getElementById("grade-links");
@@ -154,20 +84,16 @@ function renderHome() {
       let leaders = [];
 
       snap.forEach(c => {
-        const p = c.val().points || 0;
-        if (p > max) {
-          max = p;
-          leaders = [c.key];
-        } else if (p === max && p > 0) {
-          leaders.push(c.key);
-        }
+        const p = c.val() || 0;
+        if (p > max) { max = p; leaders = [c.key]; }
+        else if (p === max && p > 0) leaders.push(c.key);
       });
 
       let label = "";
       if (max > 0) {
         label = leaders.length > 1
-          ? ` <span class="badge">🥊 TIE</span> ${leaders.join(", ")}반 (${max})`
-          : ` <span class="badge">👑</span> ${leaders[0]}반 (${max})`;
+          ? ` <span class="badge">🥊 동점</span> ${leaders.join(", ")}`
+          : ` <span class="badge">👑</span> ${leaders[0]}`;
       }
 
       li.innerHTML = `<a href="#grade-${g}">${g}학년</a>${label}`;
@@ -175,17 +101,17 @@ function renderHome() {
   }
 }
 
-/* GRADE PAGE */
+/* GRADE page: show each class with details */
 function renderGrade(g) {
   app.innerHTML = `
     <h2>${g}학년</h2>
     <div class="grid" id="grid"></div>
-    <button onclick="location.hash=''">← Home</button>
+    <button onclick="location.hash=''">← 홈으로</button>
   `;
-
   const grid = document.getElementById("grid");
-  db.ref(`grades/${g}`).off();
-  db.ref(`grades/${g}`).on("value", snap => {
+
+  db.ref(`classes/${g}`).off();
+  db.ref(`classes/${g}`).on("value", snap => {
     grid.innerHTML = "";
     snap.forEach(c => {
       const data = c.val();
@@ -193,83 +119,87 @@ function renderGrade(g) {
       card.className = "card";
 
       const reasons = (data.reasons || []).slice(-3).map(r =>
-        `<div class="reason ${r.delta > 0 ? 'plus' : 'minus'}">
+        `<div class="reason ${r.delta>0?'plus':'minus'}">
           ${r.text} <span class="reason-time">(${r.time})</span>
         </div>`
       ).join("");
 
       card.innerHTML = `
-        <div class="class-name">${c.key}반</div>
+        <div class="class-name">${c.key}</div>
         <div class="points">${data.points || 0}</div>
         <div class="reasons">${reasons}</div>
-        <input placeholder="Reason" id="r-${g}-${c.key}">
-        <button onclick="addPoint(${g},'${c.key}',1)">+1</button>
-        <button onclick="addPoint(${g},'${c.key}',-1)">-1</button>
-        ${lastUndo ? `<button onclick="undo()">Undo</button>` : ""}
+        <input placeholder="사유 입력" id="r-${g}-${c.key}">
+        <button onclick="addPoint(${g},'${c.key}',1)">+1점</button>
+        <button onclick="addPoint(${g},'${c.key}',-1)">-1점</button>
+        ${lastUndo ? `<button onclick="undo()">실행 취소</button>` : ""}
       `;
       grid.appendChild(card);
     });
   });
 }
 
-/* ADD POINT */
-function addPoint(g, c, delta) {
-  const input = document.getElementById(`r-${g}-${c}`);
+/* Add/subtract points: updates both classes and grades */
+function addPoint(grade, cls, delta) {
+  const input = document.getElementById(`r-${grade}-${cls}`);
   const text = input.value.trim();
   if (!text) return;
 
-  const time = new Date().toLocaleString("ko-KR", {
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit"
-  });
+  const time = new Date().toLocaleString("ko-KR",{ month:"2-digit", day:"2-digit", hour:"2-digit", minute:"2-digit" });
 
-  const ref = db.ref(`grades/${g}/${c}`);
-  ref.transaction(d => {
-    d ||= { points: 0, reasons: [] };
+  const classRef = db.ref(`classes/${grade}/${cls}`);
+  classRef.transaction(d => {
+    d ||= { points:0, reasons:[] };
     d.points += delta;
     d.reasons.push({ text, delta, time });
-    lastUndo = { g, c, delta };
+    lastUndo = { grade, cls, delta };
     return d;
+  }).then(() => {
+    classRef.once("value").then(snap => {
+      const points = snap.val().points || 0;
+      db.ref(`grades/${grade}/${cls}`).set(points);
+    });
   });
 
   input.value = "";
 }
 
-/* UNDO */
+/* Undo last action */
 function undo() {
   if (!lastUndo) return;
-  const { g, c, delta } = lastUndo;
-  const ref = db.ref(`grades/${g}/${c}`);
-  ref.transaction(d => {
+  const { grade, cls, delta } = lastUndo;
+  const classRef = db.ref(`classes/${grade}/${cls}`);
+  classRef.transaction(d => {
     d.points -= delta;
     d.reasons.pop();
     return d;
+  }).then(() => {
+    classRef.once("value").then(snap => {
+      const points = snap.val().points || 0;
+      db.ref(`grades/${grade}/${cls}`).set(points);
+    });
   });
   lastUndo = null;
 }
 
-/* ADMIN */
+/* Admin panel */
 function renderAdmin() {
-  const pw = prompt("Password:");
+  const pw = prompt("관리자 비밀번호:");
   if (pw !== "delete") return location.hash = "";
 
-  app.innerHTML = `<h2>Admin Panel</h2>`;
-  for (let g = 1; g <= 6; g++) {
+  app.innerHTML = `<h2>관리자 패널</h2>`;
+  for(let g=1; g<=6; g++){
     app.innerHTML += `<button onclick="clearGrade(${g})">${g}학년 초기화</button><br>`;
   }
-  app.innerHTML += `<br><button onclick="location.hash=''">Home</button>`;
+  app.innerHTML += `<br><button onclick="location.hash=''">홈으로</button>`;
 }
 
-function clearGrade(g) {
-  if (!confirm("정말 삭제?")) return;
+function clearGrade(g){
+  if(!confirm("정말 삭제하시겠습니까?")) return;
+  db.ref(`classes/${g}`).remove();
   db.ref(`grades/${g}`).remove();
 }
 
-function goAdmin() {
-  location.hash = "#admin";
-}
+function goAdmin(){ location.hash="#admin"; }
 
 router();
 </script>
