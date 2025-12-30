@@ -14,38 +14,55 @@ body {
   margin: 20px;
 }
 
-/* Links and buttons */
-a { text-decoration: none; color: #2563eb; }
-button { cursor: pointer; padding: 6px 10px; margin: 3px; }
+a { text-decoration: none; }
 
-/* Admin button */
-.admin-btn { position: fixed; top: 10px; right: 10px; }
+button {
+  cursor: pointer;
+  padding: 6px 10px;
+}
 
-/* Home page */
-#grade-links li { font-size: 20px; margin: 10px 0; }
+.admin-btn {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+}
 
-/* Grid layout */
+/* HOME */
+#grade-links li {
+  font-size: 20px;
+  margin: 10px 0;
+}
+
+/* GRID */
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
   max-width: 900px;
   margin: auto;
   gap: 15px;
   justify-content: center;
 }
 
-/* Card */
+/* CARD */
 .card {
   border: 1px solid #ccc;
   padding: 12px;
   border-radius: 6px;
 }
 
-/* Class name & points */
-.class-name { color: #1d4ed8; font-weight: bold; font-size: 18px; }
-.points { color: #14532d; font-weight: bold; font-size: 22px; }
+.class-name {
+  color: #1d4ed8;
+  font-weight: bold;
+  font-size: 18px;
+}
 
-/* Reasons scroll */
+.points {
+  color: #14532d;
+  font-weight: bold;
+  font-size: 22px;
+}
+
+/* REASONS */
 .reasons {
   background: #f3f4f6;
   padding: 6px;
@@ -54,12 +71,25 @@ button { cursor: pointer; padding: 6px 10px; margin: 3px; }
   overflow-y: auto;
 }
 
-.reason.plus { color: #14532d; font-weight: bold; }
-.reason.minus { color: #b91c1c; font-weight: bold; }
-.reason-time { font-size: 10px; color: #000; opacity: 0.7; margin-left: 4px; }
+.reason.plus {
+  color: #14532d;
+  font-weight: bold;
+}
 
-/* Badges */
-.badge { margin-left: 6px; }
+.reason.minus {
+  color: #b91c1c;
+  font-weight: bold;
+}
+
+.reason-time {
+  font-size: 11px;
+  opacity: 0.7;
+}
+
+/* BADGES */
+.badge {
+  margin-left: 6px;
+}
 </style>
 </head>
 
@@ -82,24 +112,18 @@ firebase.initializeApp({
 });
 
 const db = firebase.database();
-const app = document.getElementById("app");
 let lastUndo = null;
-let activeRef = null;
 
 /* ROUTER */
 function router() {
   const hash = location.hash;
-  if (hash.startsWith("#grade")) {
-    renderGrade(hash.split("-")[1]);
-  } else if (hash === "#admin") {
-    renderAdmin();
-  } else {
-    renderHome();
-  }
+  if (hash.startsWith("#grade")) renderGrade(hash.split("-")[1]);
+  else if (hash === "#admin") renderAdmin();
+  else renderHome();
 }
-window.addEventListener("hashchange", router);
+window.onhashchange = router;
 
-/* HOME PAGE */
+/* HOME */
 function renderHome() {
   app.innerHTML = `<ul id="grade-links"></ul>`;
   const ul = document.getElementById("grade-links");
@@ -108,18 +132,18 @@ function renderHome() {
     const li = document.createElement("li");
     ul.appendChild(li);
 
-    if (activeRef) activeRef.off();
-    const ref = db.ref(`grades/${g}`);
-    ref.on("value", snap => {
+    db.ref(`grades/${g}`).off();
+    db.ref(`grades/${g}`).on("value", snap => {
       let max = 0;
       let leaders = [];
-      snap.forEach(cls => {
-        const p = cls.val()?.points || 0;
+
+      snap.forEach(c => {
+        const p = c.val().points || 0;
         if (p > max) {
           max = p;
-          leaders = [cls.key];
+          leaders = [c.key];
         } else if (p === max && p > 0) {
-          leaders.push(cls.key);
+          leaders.push(c.key);
         }
       });
 
@@ -144,33 +168,29 @@ function renderGrade(g) {
   `;
 
   const grid = document.getElementById("grid");
-
-  if (activeRef) activeRef.off();
-  activeRef = db.ref(`grades/${g}`);
-  activeRef.on("value", snap => {
+  db.ref(`grades/${g}`).off();
+  db.ref(`grades/${g}`).on("value", snap => {
     grid.innerHTML = "";
-
-    snap.forEach(cls => {
-      const data = cls.val();
+    snap.forEach(c => {
+      const data = c.val();
       const card = document.createElement("div");
       card.className = "card";
 
-      const reasonsHTML = (data.reasons || []).slice(-3).map(r => `
-        <div class="reason ${r.delta > 0 ? 'plus' : 'minus'}">
+      const reasons = (data.reasons || []).slice(-3).map(r =>
+        `<div class="reason ${r.delta > 0 ? 'plus' : 'minus'}">
           ${r.text} <span class="reason-time">(${r.time})</span>
-        </div>
-      `).join("");
+        </div>`
+      ).join("");
 
       card.innerHTML = `
-        <div class="class-name">${cls.key}반</div>
+        <div class="class-name">${c.key}반</div>
         <div class="points">${data.points || 0}</div>
-        <div class="reasons">${reasonsHTML}</div>
-        <input id="r-${g}-${cls.key}" placeholder="이유 입력">
-        <button onclick="addPoint(${g},'${cls.key}',2)">+2</button>
-        <button onclick="addPoint(${g},'${cls.key}',-1)">-1</button>
-        ${lastUndo && lastUndo.g===Number(g) && lastUndo.c===cls.key ? `<button onclick="undo()">Undo</button>` : ""}
+        <div class="reasons">${reasons}</div>
+        <input placeholder="Reason" id="r-${g}-${c.key}">
+        <button onclick="addPoint(${g},'${c.key}',1)">+1</button>
+        <button onclick="addPoint(${g},'${c.key}',-1)">-1</button>
+        ${lastUndo ? `<button onclick="undo()">Undo</button>` : ""}
       `;
-
       grid.appendChild(card);
     });
   });
@@ -182,12 +202,12 @@ function addPoint(g, c, delta) {
   const text = input.value.trim();
   if (!text) return;
 
-  const now = new Date();
-  const time =
-    String(now.getMonth() + 1).padStart(2, "0") + "." +
-    String(now.getDate()).padStart(2, "0") + " " +
-    String(now.getHours()).padStart(2, "0") + ":" +
-    String(now.getMinutes()).padStart(2, "0");
+  const time = new Date().toLocaleString("ko-KR", {
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit"
+  });
 
   const ref = db.ref(`grades/${g}/${c}`);
   ref.transaction(d => {
@@ -205,33 +225,29 @@ function addPoint(g, c, delta) {
 function undo() {
   if (!lastUndo) return;
   const { g, c, delta } = lastUndo;
-
-  db.ref(`grades/${g}/${c}`).transaction(d => {
+  const ref = db.ref(`grades/${g}/${c}`);
+  ref.transaction(d => {
     d.points -= delta;
     d.reasons.pop();
     return d;
   });
-
   lastUndo = null;
 }
 
 /* ADMIN */
 function renderAdmin() {
-  const pw = prompt("관리자 비밀번호:");
-  if (pw !== "delete") {
-    location.hash = "";
-    return;
-  }
+  const pw = prompt("Password:");
+  if (pw !== "delete") return location.hash = "";
 
   app.innerHTML = `<h2>Admin Panel</h2>`;
   for (let g = 1; g <= 6; g++) {
-    app.innerHTML += `<button onclick="clearGrade(${g})">${g}학년 점수 초기화</button><br>`;
+    app.innerHTML += `<button onclick="clearGrade(${g})">${g}학년 초기화</button><br>`;
   }
   app.innerHTML += `<br><button onclick="location.hash=''">Home</button>`;
 }
 
 function clearGrade(g) {
-  if (!confirm("정말 초기화하시겠습니까?")) return;
+  if (!confirm("정말 삭제?")) return;
   db.ref(`grades/${g}`).remove();
 }
 
@@ -239,7 +255,6 @@ function goAdmin() {
   location.hash = "#admin";
 }
 
-/* START */
 router();
 </script>
 
