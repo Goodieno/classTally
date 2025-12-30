@@ -33,7 +33,10 @@ button.link-btn:hover { text-decoration: underline; }
   font-weight: bold;
   color: #15803d;
 }
-.leader-score { color: #000; margin-left: 4px; }
+.leader-score {
+  color: #000;
+  margin-left: 4px;
+}
 
 /* GRID */
 .grid {
@@ -58,7 +61,7 @@ button.link-btn:hover { text-decoration: underline; }
 
 .points {
   font-weight: bold;
-  color: #14532d;
+  color: #14532d; /* forest green */
 }
 
 /* CONTROLS */
@@ -93,12 +96,12 @@ button.link-btn:hover { text-decoration: underline; }
 /* REASONS */
 .reasons-wrapper {
   margin-top: 10px;
-  max-height: 180px; /* ~3 reasons */
+  max-height: 180px; /* ~3 reasons visible */
   overflow-y: auto;
   border: 1px solid #ddd;
   padding: 8px;
   border-radius: 8px;
-  background: #fafafa;
+  background: #f9fafb;
 }
 
 .reason-entry {
@@ -112,7 +115,18 @@ button.link-btn:hover { text-decoration: underline; }
 
 .reason-time {
   font-size: 12px;
-  color: #666;
+  color: #555;
+}
+
+/* COLOR BY SCORE TYPE */
+.reason-add {
+  color: #14532d; /* forest green */
+  font-weight: bold;
+}
+
+.reason-take {
+  color: #b91c1c; /* deep red */
+  font-weight: bold;
 }
 
 /* ADMIN BUTTON */
@@ -140,7 +154,6 @@ button.link-btn:hover { text-decoration: underline; }
 
 <div id="view"></div>
 
-<!-- ADMIN BUTTON (ALWAYS VISIBLE) -->
 <div class="admin-link">
   <button class="link-btn" id="admin-link">⚙️ Admin</button>
 </div>
@@ -189,7 +202,6 @@ function getLeaders(grade) {
   const classes = Object.entries(grades[grade]);
   const max = Math.max(...classes.map(c => c[1].points));
   if (max <= 0) return [];
-
   return classes
     .filter(c => c[1].points === max)
     .map(c => ({ name: c[0], points: c[1].points }));
@@ -239,8 +251,11 @@ function renderGrade(grade) {
       history.innerHTML = "";
       data.reasons.forEach(r => {
         const div = document.createElement("div");
-        div.className = "reason-entry";
-        div.innerHTML = `<div>${r.text}</div><div class="reason-time">${r.time}</div>`;
+        div.className = `reason-entry ${r.delta > 0 ? "reason-add" : "reason-take"}`;
+        div.innerHTML = `
+          <div>${r.text}</div>
+          <div class="reason-time">${r.time}</div>
+        `;
         history.appendChild(div);
       });
       history.scrollTop = history.scrollHeight;
@@ -285,11 +300,8 @@ function renderGrade(grade) {
 /* ADMIN */
 function checkAdminPassword() {
   const pw = prompt("관리자 비밀번호를 입력하세요:");
-  if (pw === "delete") {
-    renderAdmin();
-  } else if (pw !== null) {
-    alert("비밀번호가 올바르지 않습니다.");
-  }
+  if (pw === "delete") renderAdmin();
+  else if (pw !== null) alert("비밀번호가 올바르지 않습니다.");
 }
 
 function renderAdmin() {
@@ -313,6 +325,7 @@ function renderAdmin() {
         c.reasons = [];
       });
       alert(`${g}학년 점수가 초기화되었습니다.`);
+      renderHome();
     };
     view.appendChild(btn);
     view.appendChild(document.createElement("br"));
