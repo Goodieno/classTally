@@ -14,12 +14,15 @@ body {
   margin: 20px;
 }
 
-a { text-decoration: none; }
+a {
+  text-decoration: none;
+  color: #2563eb;
+}
 
 button {
   cursor: pointer;
   padding: 6px 10px;
-  margin: 2px;
+  margin: 3px;
 }
 
 .admin-btn {
@@ -82,7 +85,6 @@ button {
   font-weight: bold;
 }
 
-/* ✅ TIMESTAMP — SMALL + BLACK */
 .reason-time {
   font-size: 10px;
   color: #000;
@@ -116,16 +118,24 @@ firebase.initializeApp({
 });
 
 const db = firebase.database();
+
+/* ✅ FIX: app WAS MISSING BEFORE */
+const app = document.getElementById("app");
+
 let lastUndo = null;
 
 /* ROUTER */
 function router() {
   const hash = location.hash;
-  if (hash.startsWith("#grade")) renderGrade(hash.split("-")[1]);
-  else if (hash === "#admin") renderAdmin();
-  else renderHome();
+  if (hash.startsWith("#grade")) {
+    renderGrade(hash.split("-")[1]);
+  } else if (hash === "#admin") {
+    renderAdmin();
+  } else {
+    renderHome();
+  }
 }
-window.onhashchange = router;
+window.addEventListener("hashchange", router);
 
 /* HOME */
 function renderHome() {
@@ -141,13 +151,13 @@ function renderHome() {
       let max = 0;
       let leaders = [];
 
-      snap.forEach(c => {
-        const p = c.val().points || 0;
+      snap.forEach(cls => {
+        const p = cls.val().points || 0;
         if (p > max) {
           max = p;
-          leaders = [c.key];
+          leaders = [cls.key];
         } else if (p === max && p > 0) {
-          leaders.push(c.key);
+          leaders.push(cls.key);
         }
       });
 
@@ -172,11 +182,13 @@ function renderGrade(g) {
   `;
 
   const grid = document.getElementById("grid");
+
   db.ref(`grades/${g}`).off();
   db.ref(`grades/${g}`).on("value", snap => {
     grid.innerHTML = "";
-    snap.forEach(c => {
-      const data = c.val();
+
+    snap.forEach(cls => {
+      const data = cls.val();
       const card = document.createElement("div");
       card.className = "card";
 
@@ -188,15 +200,16 @@ function renderGrade(g) {
       `).join("");
 
       card.innerHTML = `
-        <div class="class-name">${c.key}반</div>
+        <div class="class-name">${cls.key}반</div>
         <div class="points">${data.points || 0}</div>
         <div class="reasons">${reasonsHTML}</div>
 
-        <input placeholder="Reason" id="r-${g}-${c.key}">
-        <button onclick="addPoint(${g},'${c.key}',2)">+2</button>
-        <button onclick="addPoint(${g},'${c.key}',-1)">-1</button>
+        <input id="r-${g}-${cls.key}" placeholder="이유 입력">
+        <button onclick="addPoint(${g},'${cls.key}',2)">+2</button>
+        <button onclick="addPoint(${g},'${cls.key}',-1)">-1</button>
         ${lastUndo ? `<button onclick="undo()">Undo</button>` : ""}
       `;
+
       grid.appendChild(card);
     });
   });
@@ -227,33 +240,39 @@ function addPoint(g, c, delta) {
   input.value = "";
 }
 
-/* UNDO (session only) */
+/* UNDO — SESSION ONLY */
 function undo() {
   if (!lastUndo) return;
   const { g, c, delta } = lastUndo;
-  const ref = db.ref(`grades/${g}/${c}`);
-  ref.transaction(d => {
+
+  db.ref(`grades/${g}/${c}`).transaction(d => {
     d.points -= delta;
     d.reasons.pop();
     return d;
   });
+
   lastUndo = null;
 }
 
 /* ADMIN */
 function renderAdmin() {
-  const pw = prompt("Password:");
-  if (pw !== "delete") return location.hash = "";
+  const pw = prompt("관리자 비밀번호:");
+  if (pw !== "delete") {
+    location.hash = "";
+    return;
+  }
 
   app.innerHTML = `<h2>Admin Panel</h2>`;
   for (let g = 1; g <= 6; g++) {
-    app.innerHTML += `<button onclick="clearGrade(${g})">${g}학년 초기화</button><br>`;
+    app.innerHTML += `
+      <button onclick="clearGrade(${g})">${g}학년 점수 초기화</button><br>
+    `;
   }
   app.innerHTML += `<br><button onclick="location.hash=''">Home</button>`;
 }
 
 function clearGrade(g) {
-  if (!confirm("정말 삭제?")) return;
+  if (!confirm("정말 초기화하시겠습니까?")) return;
   db.ref(`grades/${g}`).remove();
 }
 
@@ -261,6 +280,7 @@ function goAdmin() {
   location.hash = "#admin";
 }
 
+/* START */
 router();
 </script>
 
