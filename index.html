@@ -1,298 +1,42 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="en">
 <head>
-<meta charset="UTF-8" />
-<title>Class Tally</title>
+  <meta charset="UTF-8">
+  <title>Firebase Test</title>
 
-<!-- Firebase -->
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-
-<style>
-body {
-  font-family: Arial, sans-serif;
-  margin: 20px;
-}
-
-a {
-  text-decoration: none;
-  color: #2563eb;
-}
-
-button {
-  cursor: pointer;
-  padding: 6px 10px;
-  margin: 3px;
-}
-
-.admin-btn {
-  position: fixed;
-  top: 10px;
-  right: 10px;
-}
-
-/* HOME */
-#grade-links li {
-  font-size: 20px;
-  margin: 10px 0;
-}
-
-/* GRID */
-.grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  max-width: 900px;
-  margin: auto;
-  gap: 15px;
-  justify-content: center;
-}
-
-/* CARD */
-.card {
-  border: 1px solid #ccc;
-  padding: 12px;
-  border-radius: 6px;
-}
-
-.class-name {
-  color: #1d4ed8;
-  font-weight: bold;
-  font-size: 18px;
-}
-
-.points {
-  color: #14532d;
-  font-weight: bold;
-  font-size: 22px;
-}
-
-/* REASONS */
-.reasons {
-  background: #f3f4f6;
-  padding: 6px;
-  margin-top: 6px;
-  max-height: 90px;
-  overflow-y: auto;
-}
-
-.reason.plus {
-  color: #14532d;
-  font-weight: bold;
-}
-
-.reason.minus {
-  color: #b91c1c;
-  font-weight: bold;
-}
-
-.reason-time {
-  font-size: 10px;
-  color: #000;
-  opacity: 0.7;
-  margin-left: 4px;
-}
-
-/* BADGES */
-.badge {
-  margin-left: 6px;
-}
-</style>
+  <!-- Firebase (compat version – beginner friendly) -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 </head>
-
 <body>
 
-<button class="admin-btn" onclick="goAdmin()">Admin</button>
-
-<div id="app"></div>
+<h1>Firebase Test Page</h1>
+<p>If Firebase works, data will appear in the console and database.</p>
 
 <script>
-/* 🔥 FIREBASE */
-firebase.initializeApp({
-  apiKey: "AIzaSyDWrEqadNQ0ktZ9rIBG7yRequX_rstFFsE",
-  authDomain: "online-tally-system.firebaseapp.com",
-  databaseURL: "https://online-tally-system-default-rtdb.firebaseio.com",
-  projectId: "online-tally-system",
-  storageBucket: "online-tally-system.firebasestorage.app",
-  messagingSenderId: "89585597340",
-  appId: "1:89585597340:web:989e55802c4ebf68f6e659"
-});
-
-const db = firebase.database();
-const app = document.getElementById("app");
-let lastUndo = null;
-
-/* ENSURE CLASSES EXIST */
-function ensureClassesExist(grade) {
-  const ref = db.ref(`grades/${grade}`);
-  ref.once("value", snap => {
-    if (!snap.exists()) {
-      const init = {};
-      for (let c = 1; c <= 8; c++) {
-        init[c] = { points: 0, reasons: [] };
-      }
-      ref.set(init);
-    }
-  });
-}
-
-/* ROUTER */
-function router() {
-  const hash = location.hash;
-  if (hash.startsWith("#grade")) {
-    renderGrade(hash.split("-")[1]);
-  } else if (hash === "#admin") {
-    renderAdmin();
-  } else {
-    renderHome();
-  }
-}
-window.addEventListener("hashchange", router);
-
-/* HOME */
-function renderHome() {
-  app.innerHTML = `<ul id="grade-links"></ul>`;
-  const ul = document.getElementById("grade-links");
-
-  for (let g = 1; g <= 6; g++) {
-    const li = document.createElement("li");
-    ul.appendChild(li);
-
-    db.ref(`grades/${g}`).off();
-    db.ref(`grades/${g}`).on("value", snap => {
-      let max = 0;
-      let leaders = [];
-
-      snap.forEach(cls => {
-        const p = cls.val().points || 0;
-        if (p > max) {
-          max = p;
-          leaders = [cls.key];
-        } else if (p === max && p > 0) {
-          leaders.push(cls.key);
-        }
-      });
-
-      let label = "";
-      if (max > 0) {
-        label = leaders.length > 1
-          ? ` <span class="badge">🥊 TIE</span> ${leaders.join(", ")}반 (${max})`
-          : ` <span class="badge">👑</span> ${leaders[0]}반 (${max})`;
-      }
-
-      li.innerHTML = `<a href="#grade-${g}">${g}학년</a>${label}`;
-    });
-  }
-}
-
-/* GRADE PAGE */
-function renderGrade(g) {
-  ensureClassesExist(g);
-
-  app.innerHTML = `
-    <h2>${g}학년</h2>
-    <div class="grid" id="grid"></div>
-    <button onclick="location.hash=''">← Home</button>
-  `;
-
-  const grid = document.getElementById("grid");
-
-  db.ref(`grades/${g}`).off();
-  db.ref(`grades/${g}`).on("value", snap => {
-    grid.innerHTML = "";
-
-    snap.forEach(cls => {
-      const data = cls.val();
-      const card = document.createElement("div");
-      card.className = "card";
-
-      const reasonsHTML = (data.reasons || []).slice(-3).map(r => `
-        <div class="reason ${r.delta > 0 ? 'plus' : 'minus'}">
-          ${r.text}
-          <span class="reason-time">(${r.time})</span>
-        </div>
-      `).join("");
-
-      card.innerHTML = `
-        <div class="class-name">${cls.key}반</div>
-        <div class="points">${data.points || 0}</div>
-        <div class="reasons">${reasonsHTML}</div>
-
-        <input id="r-${g}-${cls.key}" placeholder="이유 입력">
-        <button onclick="addPoint(${g},'${cls.key}',2)">+2</button>
-        <button onclick="addPoint(${g},'${cls.key}',-1)">-1</button>
-        ${lastUndo ? `<button onclick="undo()">Undo</button>` : ""}
-      `;
-
-      grid.appendChild(card);
-    });
-  });
-}
-
-/* ADD POINT */
-function addPoint(g, c, delta) {
-  const input = document.getElementById(`r-${g}-${c}`);
-  const text = input.value.trim();
-  if (!text) return;
-
-  const now = new Date();
-  const time =
-    String(now.getMonth() + 1).padStart(2, "0") + "." +
-    String(now.getDate()).padStart(2, "0") + " " +
-    String(now.getHours()).padStart(2, "0") + ":" +
-    String(now.getMinutes()).padStart(2, "0");
-
-  db.ref(`grades/${g}/${c}`).transaction(d => {
-    d.points += delta;
-    d.reasons.push({ text, delta, time });
-    lastUndo = { g, c, delta };
-    return d;
+  // 🔥 Your Firebase config
+  firebase.initializeApp({
+    apiKey: "AIzaSyDWrEqadNQ0ktZ9rIBG7yRequX_rstFFsE",
+    authDomain: "online-tally-system.firebaseapp.com",
+    databaseURL: "https://online-tally-system-default-rtdb.firebaseio.com",
+    projectId: "online-tally-system",
+    storageBucket: "online-tally-system.firebasestorage.app",
+    messagingSenderId: "89585597340",
+    appId: "1:89585597340:web:989e55802c4ebf68f6e659"
   });
 
-  input.value = "";
-}
+  const db = firebase.database();
 
-/* UNDO (SESSION ONLY) */
-function undo() {
-  if (!lastUndo) return;
-  const { g, c, delta } = lastUndo;
-
-  db.ref(`grades/${g}/${c}`).transaction(d => {
-    d.points -= delta;
-    d.reasons.pop();
-    return d;
+  // ✅ WRITE TEST DATA
+  db.ref("firebaseTest").set({
+    message: "Firebase is working",
+    time: Date.now()
   });
 
-  lastUndo = null;
-}
-
-/* ADMIN */
-function renderAdmin() {
-  const pw = prompt("관리자 비밀번호:");
-  if (pw !== "delete") {
-    location.hash = "";
-    return;
-  }
-
-  app.innerHTML = `<h2>Admin Panel</h2>`;
-  for (let g = 1; g <= 6; g++) {
-    app.innerHTML += `
-      <button onclick="clearGrade(${g})">${g}학년 점수 초기화</button><br>
-    `;
-  }
-  app.innerHTML += `<br><button onclick="location.hash=''">Home</button>`;
-}
-
-function clearGrade(g) {
-  if (!confirm("정말 초기화하시겠습니까?")) return;
-  db.ref(`grades/${g}`).remove();
-}
-
-function goAdmin() {
-  location.hash = "#admin";
-}
-
-/* START */
-router();
+  // ✅ READ TEST DATA
+  db.ref("firebaseTest").once("value").then(snapshot => {
+    console.log("Firebase read:", snapshot.val());
+  });
 </script>
 
 </body>
