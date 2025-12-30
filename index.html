@@ -118,11 +118,22 @@ firebase.initializeApp({
 });
 
 const db = firebase.database();
-
-/* ✅ FIX: app WAS MISSING BEFORE */
 const app = document.getElementById("app");
-
 let lastUndo = null;
+
+/* ENSURE CLASSES EXIST */
+function ensureClassesExist(grade) {
+  const ref = db.ref(`grades/${grade}`);
+  ref.once("value", snap => {
+    if (!snap.exists()) {
+      const init = {};
+      for (let c = 1; c <= 8; c++) {
+        init[c] = { points: 0, reasons: [] };
+      }
+      ref.set(init);
+    }
+  });
+}
 
 /* ROUTER */
 function router() {
@@ -175,6 +186,8 @@ function renderHome() {
 
 /* GRADE PAGE */
 function renderGrade(g) {
+  ensureClassesExist(g);
+
   app.innerHTML = `
     <h2>${g}학년</h2>
     <div class="grid" id="grid"></div>
@@ -228,9 +241,7 @@ function addPoint(g, c, delta) {
     String(now.getHours()).padStart(2, "0") + ":" +
     String(now.getMinutes()).padStart(2, "0");
 
-  const ref = db.ref(`grades/${g}/${c}`);
-  ref.transaction(d => {
-    d ||= { points: 0, reasons: [] };
+  db.ref(`grades/${g}/${c}`).transaction(d => {
     d.points += delta;
     d.reasons.push({ text, delta, time });
     lastUndo = { g, c, delta };
@@ -240,7 +251,7 @@ function addPoint(g, c, delta) {
   input.value = "";
 }
 
-/* UNDO — SESSION ONLY */
+/* UNDO (SESSION ONLY) */
 function undo() {
   if (!lastUndo) return;
   const { g, c, delta } = lastUndo;
