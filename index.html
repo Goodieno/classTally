@@ -10,7 +10,7 @@
     li { margin:8px 0; }
     a { text-decoration:none; color:#2563eb; font-size:18px; }
     a:hover { text-decoration:underline; }
-    .grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
+    .grid { display:grid; gap:12px; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); }
     .card { border:1px solid #ddd; border-radius:8px; padding:12px; background:#fff; }
     .row { display:flex; justify-content:space-between; margin-bottom:10px; }
     .controls { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
@@ -22,15 +22,15 @@
     .reason.add { color:#16a34a; font-weight:bold; background:#fff; padding:4px; border-radius:4px; }
     .reason.take { color:#dc2626; font-weight:bold; background:#fff; padding:4px; border-radius:4px; }
     .score { font-weight:bold; }
-    .class-name { font-weight:bold; font-size:20px; }
-    .back { display:inline-block; margin-top:16px; color:#2563eb; text-decoration:none; }
-    /* Hidden admin link bottom-right */
+    .back { display:inline-block; margin-bottom:16px; color:#2563eb; text-decoration:none; }
+
+    /* Admin link bottom-right */
     .admin-link {
       position: fixed;
       bottom: 10px;
       right: 10px;
       font-size: 12px;
-      opacity: 0.5;
+      opacity: 0.6;
       z-index: 1000;
     }
     .admin-link a {
@@ -41,15 +41,13 @@
       opacity: 1;
       text-decoration: underline;
     }
+
     /* Spacer below grid */
-    .grid-spacer {
-      height: 2in;
-    }
+    .grid-spacer { height: 2in; }
   </style>
 </head>
 <body>
-  <!-- Root page grade links -->
-  <div id="home-links">
+  <div id="home">
     <h1>학년 선택</h1>
     <ul>
       <li><a href="javascript:void(0)" onclick="renderGrade(1)">1학년</a></li>
@@ -63,12 +61,13 @@
 
   <div id="view"></div>
 
-  <!-- Admin link always bottom-right -->
+  <!-- Admin link bottom-right -->
   <div class="admin-link">
     <a href="javascript:void(0)" onclick="checkAdminPassword()">⚙️ Admin Panel</a>
   </div>
 
   <script>
+    // 데이터 구조: 각 학년 8개 반
     const grades = {};
     for (let g=1; g<=6; g++) {
       grades[`${g}학년`] = {};
@@ -78,9 +77,11 @@
     }
 
     function renderGrade(grade) {
-      document.getElementById("home-links").style.display = "none"; // hide root links
+      document.getElementById("home").style.display = "none";
+
       const view = document.getElementById("view");
       view.innerHTML = `
+        <a href="javascript:void(0)" class="back" onclick="goHome()">← 학년으로 돌아가기</a>
         <h2>${grade}학년 학급 점수판</h2>
         <div class="grid"></div>
       `;
@@ -91,7 +92,7 @@
         card.className = "card";
         card.innerHTML = `
           <div class="row">
-            <div class="class-name">${className}</div>
+            <div>${className}</div>
             <div>총점: <span class="score">${data.points}</span></div>
           </div>
           <div class="controls">
@@ -141,36 +142,35 @@
         grid.appendChild(card);
       });
 
-      // Spacer below grid
+      // Spacer to avoid crowding admin link
       const spacer = document.createElement("div");
       spacer.className = "grid-spacer";
       view.appendChild(spacer);
-
-      // Back link at bottom of grade view
-      const backLink = document.createElement("div");
-      backLink.className = "back-link";
-      backLink.innerHTML = `<a href="javascript:void(0)" class="back" onclick="goHome()">← 학년으로 돌아가기</a>`;
-      view.appendChild(backLink);
     }
 
+    function goHome() {
+      document.getElementById("view").innerHTML = "";
+      document.getElementById("home").style.display = "block";
+    }
+
+    // Admin flow (simple password: "delete")
     function checkAdminPassword() {
       const pw = prompt("관리자 비밀번호를 입력하세요:");
       if (pw === "delete") {
         renderAdmin();
-      } else {
+      } else if (pw !== null) {
         alert("비밀번호가 올바르지 않습니다.");
       }
     }
 
     function renderAdmin() {
+      document.getElementById("home").style.display = "none";
       const view = document.getElementById("view");
       view.innerHTML = `
+        <a href="javascript:void(0)" class="back" onclick="goHome()">← 학년으로 돌아가기</a>
         <h2>관리자 메뉴</h2>
         <p>학년별 점수를 초기화할 수 있습니다.</p>
         <ul id="adminList"></ul>
-        <div class="back-link">
-          <a href="javascript:void(0)" class="back" onclick="goHome()">← 학년으로 돌아가기</a>
-        </div>
       `;
       const adminList = document.getElementById("adminList");
       for (let g = 1; g <= 6; g++) {
@@ -178,6 +178,10 @@
         li.innerHTML = `<a href="javascript:void(0)" onclick="resetGrade(${g})">${g}학년 점수 초기화</a>`;
         adminList.appendChild(li);
       }
+
+      const spacer = document.createElement("div");
+      spacer.className = "grid-spacer";
+      view.appendChild(spacer);
     }
 
     function resetGrade(grade) {
@@ -189,10 +193,12 @@
       alert(`${grade}학년 점수가 초기화되었습니다.`);
     }
 
-    function goHome() {
-      document.getElementById("home-links").style.display = "block"; // show root links again
-      document.getElementById("view").innerHTML = "";
-    }
-
+    // Expose functions for inline handlers
     window.renderGrade = renderGrade;
-    window.checkAdminPassword = checkAdminPassword
+    window.goHome = goHome;
+    window.checkAdminPassword = checkAdminPassword;
+    window.resetGrade = resetGrade;
+    window.renderAdmin = renderAdmin;
+  </script>
+</body>
+</html>
