@@ -1,142 +1,12 @@
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-  <meta charset="UTF-8">
-  <title>학급 점수판</title>
-
-  <!-- Firebase -->
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-
-  <style>
-    body { font-family: Arial, sans-serif; padding:20px; background:#f9fafb; }
-
-    ul { list-style:none; padding:0; }
-    li { margin:10px 0; }
-
-    button.link-btn {
-      background:none;
-      border:none;
-      cursor:pointer;
-      font-size:18px;
-      color:#2563eb;
-      font-weight:bold;
-    }
-
-    .leader { color:#166534; }
-    .badge { margin-left:6px; }
-
-    /* Grid */
-    .grid {
-      display:grid;
-      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-      max-width: 900px;
-      margin: 0 auto;
-      gap:12px;
-    }
-
-    .card {
-      background:#fff;
-      border-radius:8px;
-      padding:12px;
-      border:1px solid #ddd;
-    }
-
-    .class-name {
-      color:#1d4ed8;
-      font-weight:bold;
-    }
-
-    .score {
-      font-weight:bold;
-      color:#14532d; /* forest green */
-    }
-
-    .controls button {
-      width:100%;
-      padding:8px;
-      border:none;
-      border-radius:6px;
-      color:#fff;
-      font-weight:bold;
-      cursor:pointer;
-    }
-
-    .btn-add { background:#16a34a; }
-    .btn-take { background:#dc2626; }
-
-    .reasons-wrapper {
-      max-height:120px;
-      overflow-y:auto;
-      background:#f3f4f6;
-      padding:6px;
-      border-radius:6px;
-      margin-top:8px;
-    }
-
-    .reason.add { color:#14532d; font-weight:bold; }
-    .reason.take { color:#b91c1c; font-weight:bold; }
-
-    .admin-link {
-      position:fixed;
-      bottom:10px;
-      right:10px;
-      font-size:12px;
-    }
-  </style>
-</head>
-<body>
-
-<div id="home">
-  <h1>학년 선택</h1>
-  <ul id="grade-links"></ul>
-</div>
-
-<div id="view"></div>
-
-<div class="admin-link">
-  <button class="link-btn" id="admin-btn">⚙️ Admin</button>
-</div>
-
-<script>
-/* ================= FIREBASE INIT ================= */
-
-const firebaseConfig = {
-  apiKey: "AIzaSyDWrEqadNQ0ktZ9rIBG7yRequX_rstFFsE",
-  authDomain: "online-tally-system.firebaseapp.com",
-  databaseURL: "https://online-tally-system-default-rtdb.firebaseio.com",
-  projectId: "online-tally-system",
-  storageBucket: "online-tally-system.firebasestorage.app",
-  messagingSenderId: "89585597340",
-  appId: "1:89585597340:web:989e55802c4ebf68f6e659"
-};
-
-firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
-
-/* ================= INITIAL DATA ================= */
-
-function initIfEmpty() {
-  for (let g = 1; g <= 6; g++) {
-    for (let c = 1; c <= 8; c++) {
-      const ref = db.ref(`grades/${g}/${c}`);
-      ref.once("value", snap => {
-        if (!snap.exists()) {
-          ref.set({ points: 0, reasons: {} });
-        }
-      });
-    }
-  }
-}
-initIfEmpty();
-
-/* ================= HOME PAGE ================= */
-
 function renderHome() {
   const ul = document.getElementById("grade-links");
-  ul.innerHTML = "";
+  ul.innerHTML = ""; // clear ONCE
 
   for (let g = 1; g <= 6; g++) {
+    const li = document.createElement("li");
+    li.id = `grade-${g}`;
+    ul.appendChild(li);
+
     db.ref(`grades/${g}`).on("value", snap => {
       let leaders = [];
       let max = 0;
@@ -153,117 +23,16 @@ function renderHome() {
 
       let label = "";
       if (max > 0) {
-        if (leaders.length > 1) {
-          label = ` 🥊 TIE: ${leaders.join(", ")} (${max})`;
-        } else {
-          label = ` 👑 ${leaders[0]}반 (${max})`;
-        }
+        label = leaders.length > 1
+          ? ` 🥊 <strong>TIE</strong> ${leaders.join(", ")}반 (${max})`
+          : ` 👑 ${leaders[0]}반 (${max})`;
       }
 
-      ul.innerHTML += `
-        <li>
-          <button class="link-btn" onclick="renderGrade(${g})">
-            ${g}학년 <span class="leader">${label}</span>
-          </button>
-        </li>`;
-    });
-  }
-}
-
-/* ================= GRADE PAGE ================= */
-
-function renderGrade(g) {
-  document.getElementById("home").style.display = "none";
-  const view = document.getElementById("view");
-
-  view.innerHTML = `
-    <button class="link-btn" onclick="goHome()">← 뒤로</button>
-    <h2>${g}학년</h2>
-    <div class="grid" id="grid"></div>
-  `;
-
-  const grid = document.getElementById("grid");
-
-  for (let c = 1; c <= 8; c++) {
-    const ref = db.ref(`grades/${g}/${c}`);
-
-    ref.on("value", snap => {
-      const data = snap.val();
-      let reasonsHTML = "";
-
-      if (data.reasons) {
-        Object.values(data.reasons)
-          .slice(-10)
-          .forEach(r => {
-            reasonsHTML += `
-              <div class="reason ${r.type}">
-                ${r.text} (${r.time})
-              </div>`;
-          });
-      }
-
-      const card = document.createElement("div");
-      card.className = "card";
-      card.innerHTML = `
-        <div class="class-name">${g}학년 ${c}반</div>
-        점수: <span class="score">${data.points}</span>
-
-        <input placeholder="이유 입력" id="r-${g}-${c}">
-        <button class="btn-add">+2</button>
-        <button class="btn-take">-1</button>
-
-        <div class="reasons-wrapper">${reasonsHTML}</div>
+      li.innerHTML = `
+        <button class="link-btn" onclick="renderGrade(${g})">
+          ${g}학년 <span class="leader">${label}</span>
+        </button>
       `;
-
-      card.querySelector(".btn-add").onclick = () => addPoint(g,c,2);
-      card.querySelector(".btn-take").onclick = () => addPoint(g,c,-1);
-
-      grid.appendChild(card);
     });
   }
 }
-
-/* ================= POINT UPDATE ================= */
-
-function addPoint(g,c,amt) {
-  const input = document.getElementById(`r-${g}-${c}`);
-  const text = input.value || "이유 없음";
-
-  const ref = db.ref(`grades/${g}/${c}`);
-  ref.transaction(data => {
-    data.points += amt;
-    data.reasons = data.reasons || {};
-    data.reasons[Date.now()] = {
-      type: amt > 0 ? "add" : "take",
-      text,
-      time: new Date().toLocaleString("ko-KR")
-    };
-    return data;
-  });
-
-  input.value = "";
-}
-
-/* ================= ADMIN ================= */
-
-document.getElementById("admin-btn").onclick = () => {
-  if (prompt("비밀번호") === "delete") {
-    if (confirm("모든 점수 초기화?")) {
-      db.ref("grades").remove();
-      initIfEmpty();
-      alert("초기화 완료");
-    }
-  }
-};
-
-/* ================= NAV ================= */
-
-function goHome() {
-  document.getElementById("view").innerHTML = "";
-  document.getElementById("home").style.display = "block";
-}
-
-renderHome();
-</script>
-</body>
-</html>
