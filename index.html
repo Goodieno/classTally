@@ -9,13 +9,30 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
 <style>
-body { font-family: Arial, sans-serif; margin: 20px; }
+body {
+  font-family: Arial, sans-serif;
+  margin: 20px;
+}
+
 a { text-decoration: none; }
-button { cursor: pointer; padding: 6px 10px; margin: 2px; }
-.admin-btn { position: fixed; top: 10px; right: 10px; }
+
+button {
+  cursor: pointer;
+  padding: 6px 10px;
+  margin: 2px;
+}
+
+.admin-btn {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+}
 
 /* HOME */
-#grade-links li { font-size: 20px; margin: 10px 0; }
+#grade-links li {
+  font-size: 20px;
+  margin: 10px 0;
+}
 
 /* GRID */
 .grid {
@@ -34,25 +51,59 @@ button { cursor: pointer; padding: 6px 10px; margin: 2px; }
   border-radius: 6px;
 }
 
-.class-name { color: #1d4ed8; font-weight: bold; font-size: 18px; }
-.points { color: #14532d; font-weight: bold; font-size: 22px; }
+.class-name {
+  color: #1d4ed8;
+  font-weight: bold;
+  font-size: 18px;
+}
+
+.points {
+  color: #14532d;
+  font-weight: bold;
+  font-size: 22px;
+}
 
 /* REASONS */
-.reasons { background: #f3f4f6; padding: 6px; margin-top: 6px; max-height: 90px; overflow-y: auto; }
-.reason.plus { color: #14532d; font-weight: bold; }
-.reason.minus { color: #b91c1c; font-weight: bold; }
-.reason-time { font-size: 10px; opacity: 0.65; margin-left: 4px; }
+.reasons {
+  background: #f3f4f6;
+  padding: 6px;
+  margin-top: 6px;
+  max-height: 90px;
+  overflow-y: auto;
+}
+
+.reason.plus {
+  color: #14532d;
+  font-weight: bold;
+}
+
+.reason.minus {
+  color: #b91c1c;
+  font-weight: bold;
+}
+
+/* ✅ SMALLER TIMESTAMP */
+.reason-time {
+  font-size: 10px;
+  opacity: 0.65;
+  margin-left: 4px;
+}
 
 /* BADGES */
-.badge { margin-left: 6px; }
+.badge {
+  margin-left: 6px;
+}
 </style>
 </head>
 
 <body>
+
 <button class="admin-btn" onclick="goAdmin()">Admin</button>
+
 <div id="app"></div>
 
 <script>
+/* 🔥 FIREBASE INIT */
 firebase.initializeApp({
   apiKey: "AIzaSyDWrEqadNQ0ktZ9rIBG7yRequX_rstFFsE",
   authDomain: "online-tally-system.firebaseapp.com",
@@ -60,7 +111,8 @@ firebase.initializeApp({
   projectId: "online-tally-system",
   storageBucket: "online-tally-system.firebasestorage.app",
   messagingSenderId: "89585597340",
-  appId: "1:89585597340:web:989e55802c4ebf68f6e659"
+  appId: "1:89585597340:web:989e55802c4ebf68f6e659",
+  measurementId: "G-ZWWG5EH8C8"
 });
 
 const db = firebase.database();
@@ -84,15 +136,19 @@ function renderHome() {
     const li = document.createElement("li");
     ul.appendChild(li);
 
-    db.ref(`grades/${g}`).off();
-    db.ref(`grades/${g}`).on("value", snap => {
+    db.ref(`classes/${g}`).off();
+    db.ref(`classes/${g}`).on("value", snap => {
       let max = 0;
       let leaders = [];
 
       snap.forEach(c => {
-        const p = c.val() || 0;
-        if (p > max) { max = p; leaders = [c.key]; }
-        else if (p === max && p > 0) { leaders.push(c.key); }
+        const p = c.val().points || 0;
+        if (p > max) {
+          max = p;
+          leaders = [c.key];
+        } else if (p === max && p > 0) {
+          leaders.push(c.key);
+        }
       });
 
       let label = "";
@@ -119,26 +175,26 @@ function renderGrade(g) {
   db.ref(`classes/${g}`).off();
   db.ref(`classes/${g}`).on("value", snap => {
     grid.innerHTML = "";
-
     snap.forEach(c => {
-      const data = c.val() || { points: 0, reasons: [] };
+      const data = c.val();
+      const card = document.createElement("div");
+      card.className = "card";
 
       const reasonsHTML = (data.reasons || []).slice(-3).map(r => `
         <div class="reason ${r.delta > 0 ? 'plus' : 'minus'}">
-          ${r.text} <span class="reason-time">(${r.time})</span>
+          ${r.text}
+          <span class="reason-time">(${r.time})</span>
         </div>
       `).join("");
 
-      const card = document.createElement("div");
-      card.className = "card";
       card.innerHTML = `
-        <div class="class-name">${g}학년 ${c.key}반</div>
-        <div class="points">${data.points}</div>
+        <div class="class-name">${c.key}반</div>
+        <div class="points">${data.points || 0}</div>
         <div class="reasons">${reasonsHTML}</div>
 
         <input placeholder="이유 입력" id="r-${g}-${c.key}">
-        <button onclick="addPoint(${g},'${c.key}',2)">+2</button>
-        <button onclick="addPoint(${g},'${c.key}',-1)">-1</button>
+        <button style="color:#14532d;" onclick="addPoint(${g},'${c.key}',2)">+2</button>
+        <button style="color:#b91c1c;" onclick="addPoint(${g},'${c.key}',-1)">-1</button>
         ${lastUndo ? `<button onclick="undo()">Undo</button>` : ""}
       `;
       grid.appendChild(card);
@@ -154,17 +210,17 @@ function addPoint(g, c, delta) {
 
   const now = new Date();
   const time =
-    String(now.getMonth()+1).padStart(2,"0")+"."+String(now.getDate()).padStart(2,"0")+" "+
-    String(now.getHours()).padStart(2,"0")+":"+String(now.getMinutes()).padStart(2,"0");
+    String(now.getMonth()+1).padStart(2,"0") + "." +
+    String(now.getDate()).padStart(2,"0") + " " +
+    String(now.getHours()).padStart(2,"0") + ":" +
+    String(now.getMinutes()).padStart(2,"0");
 
-  db.ref(`classes/${g}/${c}`).transaction(d => {
+  const ref = db.ref(`classes/${g}/${c}`);
+  ref.transaction(d => {
     d ||= { points: 0, reasons: [] };
     d.points += delta;
     d.reasons.push({ text, delta, time });
     lastUndo = { g, c, delta };
-
-    /* Update grades for leaderboard */
-    db.ref(`grades/${g}/${c}`).set(d.points);
     return d;
   });
 
@@ -175,16 +231,12 @@ function addPoint(g, c, delta) {
 function undo() {
   if (!lastUndo) return;
   const { g, c, delta } = lastUndo;
-
-  db.ref(`classes/${g}/${c}`).transaction(d => {
+  const ref = db.ref(`classes/${g}/${c}`);
+  ref.transaction(d => {
     d.points -= delta;
     d.reasons.pop();
-
-    /* Update grades */
-    db.ref(`grades/${g}/${c}`).set(d.points);
     return d;
   });
-
   lastUndo = null;
 }
 
@@ -195,22 +247,22 @@ function renderAdmin() {
 
   app.innerHTML = `<h2>Admin Panel</h2>`;
   for (let g = 1; g <= 6; g++) {
-    app.innerHTML += `<button onclick="clearGrade(${g})">${g}학년 점수 초기화</button><br>`;
+    app.innerHTML += `<button onclick="clearGrade(${g})">${g}학년 초기화</button><br>`;
   }
   app.innerHTML += `<br><button onclick="location.hash=''">Home</button>`;
 }
 
 function clearGrade(g) {
   if (!confirm("정말 초기화하시겠습니까?")) return;
-
   db.ref(`classes/${g}`).remove();
-  db.ref(`grades/${g}`).remove();
 }
 
-function goAdmin() { location.hash = "#admin"; }
+function goAdmin() {
+  location.hash = "#admin";
+}
 
-/* START */
 router();
 </script>
+
 </body>
 </html>
