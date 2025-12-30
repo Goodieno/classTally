@@ -11,18 +11,10 @@ body {
   background: #f9fafb;
 }
 
-h1, h2 {
-  margin-bottom: 16px;
-}
+h1, h2 { margin-bottom: 16px; }
 
-ul {
-  list-style: none;
-  padding: 0;
-}
-
-li {
-  margin: 10px 0;
-}
+ul { list-style: none; padding: 0; }
+li { margin: 10px 0; }
 
 button.link-btn {
   background: none;
@@ -33,24 +25,15 @@ button.link-btn {
   padding: 0;
 }
 
-button.link-btn:hover {
-  text-decoration: underline;
-}
+button.link-btn:hover { text-decoration: underline; }
 
+/* HOME BADGES */
 .leader-text {
   margin-left: 8px;
   font-weight: bold;
   color: #15803d;
 }
-
-.leader-score {
-  color: #000;
-  margin-left: 4px;
-}
-
-.badge {
-  margin-left: 6px;
-}
+.leader-score { color: #000; margin-left: 4px; }
 
 /* GRID */
 .grid {
@@ -62,22 +45,23 @@ button.link-btn:hover {
 }
 
 .card {
+  background: #fff;
   border: 1px solid #ddd;
   border-radius: 10px;
   padding: 12px;
-  background: #fff;
 }
 
 .class-name {
-  color: #2563eb;
   font-weight: bold;
+  color: #2563eb;
 }
 
 .points {
-  color: #14532d;
   font-weight: bold;
+  color: #14532d;
 }
 
+/* CONTROLS */
 .controls {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -109,7 +93,7 @@ button.link-btn:hover {
 /* REASONS */
 .reasons-wrapper {
   margin-top: 10px;
-  max-height: 180px;
+  max-height: 180px; /* ~3 reasons */
   overflow-y: auto;
   border: 1px solid #ddd;
   padding: 8px;
@@ -124,21 +108,20 @@ button.link-btn:hover {
   border-bottom: 1px dashed #ccc;
 }
 
-.reason-entry:last-child {
-  border-bottom: none;
-}
+.reason-entry:last-child { border-bottom: none; }
 
 .reason-time {
   font-size: 12px;
   color: #666;
 }
 
-/* ADMIN */
+/* ADMIN BUTTON */
 .admin-link {
   position: fixed;
   bottom: 10px;
   right: 10px;
   opacity: 0.7;
+  z-index: 1000;
 }
 
 .admin-link button {
@@ -157,6 +140,7 @@ button.link-btn:hover {
 
 <div id="view"></div>
 
+<!-- ADMIN BUTTON (ALWAYS VISIBLE) -->
 <div class="admin-link">
   <button class="link-btn" id="admin-link">⚙️ Admin</button>
 </div>
@@ -167,10 +151,7 @@ const grades = {};
 for (let g = 1; g <= 6; g++) {
   grades[g] = {};
   for (let c = 1; c <= 8; c++) {
-    grades[g][`${g}학년 ${c}반`] = {
-      points: 0,
-      reasons: []
-    };
+    grades[g][`${g}학년 ${c}반`] = { points: 0, reasons: [] };
   }
 }
 
@@ -203,7 +184,7 @@ function renderHome() {
   }
 }
 
-/* LEADER LOGIC */
+/* LEADERS */
 function getLeaders(grade) {
   const classes = Object.entries(grades[grade]);
   const max = Math.max(...classes.map(c => c[1].points));
@@ -218,6 +199,7 @@ function getLeaders(grade) {
 function renderGrade(grade) {
   document.getElementById("home").style.display = "none";
   const view = document.getElementById("view");
+
   view.innerHTML = `
     <button class="link-btn" id="back-home">← 돌아가기</button>
     <h2>${grade}학년 점수판</h2>
@@ -251,7 +233,7 @@ function renderGrade(grade) {
     const history = card.querySelector(".reasons-wrapper");
     const undoBtn = card.querySelector(".btn-undo");
 
-    let lastAdded = null;
+    let lastEntry = null;
 
     function renderReasons() {
       history.innerHTML = "";
@@ -266,37 +248,31 @@ function renderGrade(grade) {
 
     renderReasons();
 
-    card.querySelector(".btn-add").onclick = () => {
+    function addReason(delta, label) {
       const text = input.value.trim();
       if (!text) return;
-      const entry = { text: `+2점: ${text}`, time: new Date().toLocaleString("ko-KR"), delta: 2 };
-      data.points += 2;
+      const entry = {
+        text: `${label}: ${text}`,
+        time: new Date().toLocaleString("ko-KR"),
+        delta
+      };
+      data.points += delta;
       data.reasons.push(entry);
-      lastAdded = entry;
+      lastEntry = entry;
       undoBtn.disabled = false;
       input.value = "";
       scoreEl.textContent = data.points;
       renderReasons();
-    };
+    }
 
-    card.querySelector(".btn-take").onclick = () => {
-      const text = input.value.trim();
-      if (!text) return;
-      const entry = { text: `-1점: ${text}`, time: new Date().toLocaleString("ko-KR"), delta: -1 };
-      data.points -= 1;
-      data.reasons.push(entry);
-      lastAdded = entry;
-      undoBtn.disabled = false;
-      input.value = "";
-      scoreEl.textContent = data.points;
-      renderReasons();
-    };
+    card.querySelector(".btn-add").onclick = () => addReason(2, "+2점");
+    card.querySelector(".btn-take").onclick = () => addReason(-1, "-1점");
 
     undoBtn.onclick = () => {
-      if (!lastAdded) return;
-      data.points -= lastAdded.delta;
+      if (!lastEntry) return;
+      data.points -= lastEntry.delta;
       data.reasons.pop();
-      lastAdded = null;
+      lastEntry = null;
       undoBtn.disabled = true;
       scoreEl.textContent = data.points;
       renderReasons();
@@ -308,21 +284,35 @@ function renderGrade(grade) {
 
 /* ADMIN */
 function checkAdminPassword() {
-  if (prompt("비밀번호") === "delete") renderAdmin();
+  const pw = prompt("관리자 비밀번호를 입력하세요:");
+  if (pw === "delete") {
+    renderAdmin();
+  } else if (pw !== null) {
+    alert("비밀번호가 올바르지 않습니다.");
+  }
 }
 
 function renderAdmin() {
   document.getElementById("home").style.display = "none";
   const view = document.getElementById("view");
-  view.innerHTML = `<button class="link-btn" id="back-home">← 돌아가기</button><h2>관리자</h2>`;
+
+  view.innerHTML = `
+    <button class="link-btn" id="back-home">← 돌아가기</button>
+    <h2>관리자 패널</h2>
+    <p>학년별 점수를 초기화할 수 있습니다.</p>
+  `;
+
   for (let g = 1; g <= 6; g++) {
     const btn = document.createElement("button");
     btn.className = "link-btn";
-    btn.textContent = `${g}학년 초기화`;
+    btn.textContent = `${g}학년 점수 초기화`;
     btn.onclick = () => {
-      if (!confirm("초기화?")) return;
-      Object.values(grades[g]).forEach(c => { c.points = 0; c.reasons = []; });
-      alert("완료");
+      if (!confirm(`${g}학년 점수를 모두 초기화할까요?`)) return;
+      Object.values(grades[g]).forEach(c => {
+        c.points = 0;
+        c.reasons = [];
+      });
+      alert(`${g}학년 점수가 초기화되었습니다.`);
     };
     view.appendChild(btn);
     view.appendChild(document.createElement("br"));
