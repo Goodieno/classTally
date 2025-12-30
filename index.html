@@ -19,6 +19,7 @@ a { text-decoration: none; }
 button {
   cursor: pointer;
   padding: 6px 10px;
+  margin: 2px;
 }
 
 .admin-btn {
@@ -36,7 +37,7 @@ button {
 /* GRID */
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   max-width: 900px;
   margin: auto;
   gap: 15px;
@@ -81,9 +82,12 @@ button {
   font-weight: bold;
 }
 
+/* ✅ TIMESTAMP — SMALL + BLACK */
 .reason-time {
-  font-size: 11px;
+  font-size: 10px;
+  color: #000;
   opacity: 0.7;
+  margin-left: 4px;
 }
 
 /* BADGES */
@@ -176,18 +180,20 @@ function renderGrade(g) {
       const card = document.createElement("div");
       card.className = "card";
 
-      const reasons = (data.reasons || []).slice(-3).map(r =>
-        `<div class="reason ${r.delta > 0 ? 'plus' : 'minus'}">
-          ${r.text} <span class="reason-time">(${r.time})</span>
-        </div>`
-      ).join("");
+      const reasonsHTML = (data.reasons || []).slice(-3).map(r => `
+        <div class="reason ${r.delta > 0 ? 'plus' : 'minus'}">
+          ${r.text}
+          <span class="reason-time">(${r.time})</span>
+        </div>
+      `).join("");
 
       card.innerHTML = `
         <div class="class-name">${c.key}반</div>
         <div class="points">${data.points || 0}</div>
-        <div class="reasons">${reasons}</div>
+        <div class="reasons">${reasonsHTML}</div>
+
         <input placeholder="Reason" id="r-${g}-${c.key}">
-        <button onclick="addPoint(${g},'${c.key}',1)">+1</button>
+        <button onclick="addPoint(${g},'${c.key}',2)">+2</button>
         <button onclick="addPoint(${g},'${c.key}',-1)">-1</button>
         ${lastUndo ? `<button onclick="undo()">Undo</button>` : ""}
       `;
@@ -202,12 +208,12 @@ function addPoint(g, c, delta) {
   const text = input.value.trim();
   if (!text) return;
 
-  const time = new Date().toLocaleString("ko-KR", {
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit"
-  });
+  const now = new Date();
+  const time =
+    String(now.getMonth() + 1).padStart(2, "0") + "." +
+    String(now.getDate()).padStart(2, "0") + " " +
+    String(now.getHours()).padStart(2, "0") + ":" +
+    String(now.getMinutes()).padStart(2, "0");
 
   const ref = db.ref(`grades/${g}/${c}`);
   ref.transaction(d => {
@@ -221,7 +227,7 @@ function addPoint(g, c, delta) {
   input.value = "";
 }
 
-/* UNDO */
+/* UNDO (session only) */
 function undo() {
   if (!lastUndo) return;
   const { g, c, delta } = lastUndo;
