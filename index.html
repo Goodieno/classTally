@@ -4,10 +4,22 @@
   <meta charset="UTF-8">
   <title>학급 점수판</title>
   <style>
-    body { font-family: Arial, sans-serif; padding:20px; background:#f9fafb; }
+    body {
+      font-family: Arial, sans-serif;
+      padding:20px;
+      background:#f9fafb;
+    }
+
     h1 { margin-bottom:20px; }
+
     ul { list-style:none; padding:0; }
-    li { margin:8px 0; display:flex; align-items:center; gap:12px; }
+
+    li {
+      margin:8px 0;
+      display:flex;
+      align-items:center;
+      gap:12px;
+    }
 
     button.link-btn {
       text-decoration:none;
@@ -20,7 +32,7 @@
     }
     button.link-btn:hover { text-decoration:underline; }
 
-    /* Leader display */
+    /* ===== HOME LEADER ===== */
     .leader {
       display:flex;
       align-items:center;
@@ -35,12 +47,9 @@
       color:#000;
       font-weight:bold;
     }
-
-    /* Badge */
     .badge {
       display:inline-flex;
       align-items:center;
-      gap:4px;
       padding:2px 6px;
       border-radius:999px;
       font-size:12px;
@@ -50,14 +59,67 @@
       box-shadow:0 0 0 1px rgba(0,0,0,0.15);
     }
 
-    .grid { display:grid; gap:12px; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); }
-    .card { border:1px solid #ddd; border-radius:8px; padding:12px; background:#fff; }
-    .row { display:flex; justify-content:space-between; margin-bottom:10px; }
-    .controls { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
-    .controls button { padding:8px; border:none; color:#fff; font-weight:bold; border-radius:6px; cursor:pointer; }
+    /* ===== GRID LAYOUT (UPDATED) ===== */
+    .grid {
+      display:grid;
+      gap:16px;
+      margin:0 auto;              /* center horizontally */
+      max-width:1000px;           /* prevents more than 3 columns */
+      grid-template-columns:repeat(3, 1fr);
+    }
+
+    /* Tablet → 2 columns */
+    @media (max-width: 900px) {
+      .grid {
+        grid-template-columns:repeat(2, 1fr);
+        max-width:700px;
+      }
+    }
+
+    /* Mobile → 1 column */
+    @media (max-width: 600px) {
+      .grid {
+        grid-template-columns:1fr;
+        max-width:360px;
+      }
+    }
+
+    .card {
+      border:1px solid #ddd;
+      border-radius:8px;
+      padding:12px;
+      background:#fff;
+    }
+
+    .row {
+      display:flex;
+      justify-content:space-between;
+      margin-bottom:10px;
+    }
+
+    .controls {
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:8px;
+    }
+
+    .controls button {
+      padding:8px;
+      border:none;
+      color:#fff;
+      font-weight:bold;
+      border-radius:6px;
+      cursor:pointer;
+    }
+
     .btn-add { background:#16a34a; }
     .btn-take { background:#dc2626; }
-    .back { display:inline-block; margin-bottom:16px; }
+
+    .back {
+      display:inline-block;
+      margin-bottom:16px;
+    }
+
     .grid-spacer { height:2in; }
 
     .admin-link {
@@ -91,7 +153,6 @@
 </div>
 
 <script>
-  /* DATA */
   const grades = {};
   for (let g = 1; g <= 6; g++) {
     grades[`${g}학년`] = {};
@@ -100,48 +161,33 @@
     }
   }
 
-  /* UPDATE LEADERS (NO LEADER IF ALL 0) */
   function updateLeaders() {
     for (let g = 1; g <= 6; g++) {
-      const leaderEl = document.querySelector(`[data-leader="${g}"]`);
+      const el = document.querySelector(`[data-leader="${g}"]`);
       const entries = Object.entries(grades[`${g}학년`]);
-
-      const maxPoints = Math.max(...entries.map(([_, d]) => d.points));
-
-      if (maxPoints <= 0) {
-        leaderEl.innerHTML = "";
-        continue;
-      }
-
-      const [leaderName] = entries.find(([_, d]) => d.points === maxPoints);
-
-      leaderEl.innerHTML = `
-        <span class="badge">🏆 LEADER</span>
-        <span class="class">${leaderName}</span>
-        <span class="score">${maxPoints}</span>
-      `;
+      const max = Math.max(...entries.map(([_, d]) => d.points));
+      if (max <= 0) { el.innerHTML = ""; continue; }
+      const [name] = entries.find(([_, d]) => d.points === max);
+      el.innerHTML = `<span class="badge">🏆 LEADER</span><span class="class">${name}</span><span class="score">${max}</span>`;
     }
   }
 
   function renderGrade(grade) {
     document.getElementById("home").style.display = "none";
     const view = document.getElementById("view");
-
     view.innerHTML = `
       <button class="link-btn back" id="back-home">← 학년으로 돌아가기</button>
       <h2>${grade}학년 학급 점수판</h2>
       <div class="grid"></div>
     `;
-
     const grid = view.querySelector(".grid");
 
-    Object.entries(grades[`${grade}학년`]).forEach(([className, data]) => {
+    Object.entries(grades[`${grade}학년`]).forEach(([name, data]) => {
       const card = document.createElement("div");
       card.className = "card";
-
       card.innerHTML = `
         <div class="row">
-          <div>${className}</div>
+          <div>${name}</div>
           <div>총점: <span class="score">${data.points}</span></div>
         </div>
         <div class="controls">
@@ -149,7 +195,6 @@
           <button class="btn-take">− 점수 차감</button>
         </div>
       `;
-
       const scoreEl = card.querySelector(".score");
 
       card.querySelector(".btn-add").onclick = () => {
@@ -157,13 +202,11 @@
         scoreEl.textContent = data.points;
         updateLeaders();
       };
-
       card.querySelector(".btn-take").onclick = () => {
         data.points -= 1;
         scoreEl.textContent = data.points;
         updateLeaders();
       };
-
       grid.appendChild(card);
     });
 
@@ -183,7 +226,6 @@
   function renderAdmin() {
     document.getElementById("home").style.display = "none";
     const view = document.getElementById("view");
-
     view.innerHTML = `
       <button class="link-btn back" id="back-home">← 학년으로 돌아가기</button>
       <h2>관리자 메뉴</h2>
@@ -201,7 +243,6 @@
     alert("초기화 완료");
   }
 
-  /* EVENTS */
   document.addEventListener("click", e => {
     const gradeBtn = e.target.closest("[data-grade]");
     const resetBtn = e.target.closest("[data-reset-grade]");
